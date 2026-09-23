@@ -1,11 +1,15 @@
-import EmailDashboard from '../../components/EmailDashboard';
+'use client';
+
+import AuthGuard from '@/components/AuthGuard';
+import DashboardShell from '@/components/DashboardShell';
+import DashboardHome from '@/components/DashboardHome';
 
 export default function DashboardPage() {
-    return (
-        <div className="page-wrapper">
-            <main className="page-content">
-                <EmailDashboard />
-            </main>
-        </div>
-    );
+  return (
+    <AuthGuard>
+      <DashboardShell>
+        <DashboardHome />
+      </DashboardShell>
+    </AuthGuard>
+  );
 }

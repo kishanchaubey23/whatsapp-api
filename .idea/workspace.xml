@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="NONE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="53ec436a-82ec-4297-8446-1bbec4a1854b" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/chrome-extension/public/options.html" beforeDir="false" afterPath="$PROJECT_DIR$/chrome-extension/public/options.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/chrome-extension/public/panel.html" beforeDir="false" afterPath="$PROJECT_DIR$/chrome-extension/public/panel.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/chrome-extension/public/popup.html" beforeDir="false" afterPath="$PROJECT_DIR$/chrome-extension/public/popup.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/chrome-extension/src/content-gmail.ts" beforeDir="false" afterPath="$PROJECT_DIR$/chrome-extension/src/content-gmail.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/chrome-extension/src/content-whatsapp.ts" beforeDir="false" afterPath="$PROJECT_DIR$/chrome-extension/src/content-whatsapp.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/chrome-extension/src/lib/csv-parser.ts" beforeDir="false" afterPath="$PROJECT_DIR$/chrome-extension/src/lib/csv-parser.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/chrome-extension/src/lib/storage.ts" beforeDir="false" afterPath="$PROJECT_DIR$/chrome-extension/src/lib/storage.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/chrome-extension/src/options/Options.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/chrome-extension/src/options/Options.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/chrome-extension/src/panel/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/chrome-extension/src/panel/App.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/chrome-extension/src/popup/Popup.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/chrome-extension/src/popup/Popup.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/favicon.svg" beforeDir="false" afterPath="$PROJECT_DIR$/public/favicon.svg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/logo-with-text.svg" beforeDir="false" afterPath="$PROJECT_DIR$/public/logo-with-text.svg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/logo.svg" beforeDir="false" afterPath="$PROJECT_DIR$/public/logo.svg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/about/layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/about/layout.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/about/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/about/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/api/whatsapp/disconnect/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/whatsapp/disconnect/route.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/api/whatsapp/init/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/whatsapp/init/route.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/api/whatsapp/status/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/whatsapp/status/route.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/dashboard/layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/dashboard/layout.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/dashboard/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/dashboard/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/faq/layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/faq/layout.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/faq/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/faq/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/globals.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/globals.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/layout.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/opengraph-image.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/opengraph-image.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/privacy/layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/privacy/layout.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/privacy/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/privacy/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/EmailDashboard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/EmailDashboard.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/JsonLd.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/JsonLd.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/i18n/en.json" beforeDir="false" afterPath="$PROJECT_DIR$/src/i18n/en.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lib/whatsapp-client.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib/whatsapp-client.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lib/whatsapp-utils.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib/whatsapp-utils.ts" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ClangdSettings">
+    <option name="formatViaClangd" value="false" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 8,
+  &quot;fromUser&quot;: false
+}</component>
+  <component name="ProjectId" id="3IsdrDgYBYc8yQ8EDH4wg6MmFS6" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "git-widget-placeholder": "main",
+    "implementationPlan.dismissed.33dab2e7-3cf2-455f-9df3-6a567fcd9c30": "true",
+    "kotlin-language-version-configured": "true",
+    "settings.editor.selected.configurable": "ai.kilocode.jetbrains.settings.providers"
+  }
+}]]></component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="53ec436a-82ec-4297-8446-1bbec4a1854b" name="Changes" comment="" />
+      <created>1788557407127</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1788557407127</updated>
+    </task>
+    <servers />
+  </component>
+</project>

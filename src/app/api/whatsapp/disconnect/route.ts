@@ -1,15 +1,31 @@
 import { NextResponse } from 'next/server';
-import { disconnect } from '@/lib/whatsapp-client';
+import { disconnect, getStatus } from '@/lib/whatsapp-client';
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
-    await disconnect();
-    return NextResponse.json({ status: 'disconnected' });
+    let clearSession = true;
+    let sessionId: string | undefined;
+    try {
+      const body = (await request.json()) as { clearSession?: boolean; sessionId?: string };
+      if (typeof body.clearSession === 'boolean') clearSession = body.clearSession;
+      if (typeof body.sessionId === 'string') sessionId = body.sessionId;
+    } catch {
+      /* no body — default full disconnect */
+    }
+
+    await disconnect({ clearSession, sessionId });
+    return NextResponse.json({
+      status: getStatus(),
+      clearedSession: clearSession,
+      sessionId: sessionId ?? null,
+    });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json(
-      { status: 'error', error: message },
-      { status: 500 }
-    );
+    try {
+      await disconnect({ clearSession: true });
+    } catch {
+      /* ignore */
+    }
+    return NextResponse.json({ status: 'disconnected', error: message }, { status: 200 });
   }
 }

@@ -83,14 +83,14 @@ export function resolveSpin(template: string): string {
 }
 
 /**
- * Apply ±jitter to a base delay.
+ * Apply ±jitter to a base delay (−30% … +50%).
+ * Floor is 1s or 50% of base so turbo/custom fast paces remain usable.
  */
 export function applyJitter(baseDelayMs: number): number {
-  // Apply ±30–50% random jitter
-  const magnitude = 0.3 + Math.random() * 0.2;
-  const jitterFactor = magnitude * (Math.random() < 0.5 ? -1 : 1);
+  const jitterFactor = -0.3 + Math.random() * 0.8;
   const jittered = baseDelayMs * (1 + jitterFactor);
-  return Math.max(3000, Math.round(jittered));
+  const floor = Math.max(1000, Math.round(baseDelayMs * 0.5));
+  return Math.max(floor, Math.round(jittered));
 }
 
 export function sleep(ms: number): Promise<void> {

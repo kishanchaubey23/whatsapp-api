@@ -15,7 +15,6 @@ import {
     WifiOff,
     Globe,
     Chrome,
-    Github,
     Menu,
     X,
 } from 'lucide-react';
@@ -31,8 +30,8 @@ export default function AboutPage() {
                 <nav className="landing-nav">
                     <div className="landing-nav-inner">
                         <Link href="/" className="nav-brand">
-                            <img src="/logo.svg" alt="SendStack" width={32} height={32} />
-                            <span className="nav-brand-text">SendStack</span>
+                            <img src="/logo.svg" alt="Loopx" width={32} height={32} />
+                            <span className="nav-brand-text">Loopx</span>
                         </Link>
                         <button className="nav-toggle" onClick={() => setNavOpen(!navOpen)} aria-label="Toggle navigation">
                             {navOpen ? <X size={22} /> : <Menu size={22} />}
@@ -92,18 +91,8 @@ export default function AboutPage() {
                         <h2>{t('about.builtByTitle')}</h2>
                         <p>{t('about.builtByDesc')}</p>
                         <p>
-                            <a href="https://qobouli.com" target="_blank" rel="noopener noreferrer" className="privacy-repo-link">
-                                qobouli.com
-                            </a>
-                        </p>
-                    </section>
-
-                    <section className="privacy-section">
-                        <h2>{t('about.openSourceTitle')}</h2>
-                        <p>{t('about.openSourceDesc')}</p>
-                        <p>
-                            <a href="https://github.com/mohamed-arabi16/SendStack" target="_blank" rel="noopener noreferrer" className="privacy-repo-link">
-                                <Github size={15} style={{ display: 'inline', verticalAlign: 'middle' }} /> github.com/mohamed-arabi16/SendStack
+                            <a href="https://loopanda.com" target="_blank" rel="noopener noreferrer" className="privacy-repo-link">
+                                loopanda.com
                             </a>
                         </p>
                     </section>
@@ -118,16 +107,13 @@ export default function AboutPage() {
                 <footer className="landing-footer">
                     <div className="footer-inner">
                         <div className="footer-brand">
-                            <img src="/logo.svg" alt="SendStack" width={24} height={24} />
-                            <span>SendStack</span>
+                            <img src="/logo.svg" alt="Loopx" width={24} height={24} />
+                            <span>Loopx</span>
                         </div>
                         <div className="footer-links">
                             <Link href="/">{t('footer.home')}</Link>
                             <Link href="/privacy">{t('footer.privacyPolicy')}</Link>
                             <Link href="/faq">{t('nav.faq')}</Link>
-                            <a href="https://github.com/mohamed-arabi16/SendStack" target="_blank" rel="noopener noreferrer">
-                                {t('footer.sourceCode')}
-                            </a>
                         </div>
                     </div>
                 </footer>

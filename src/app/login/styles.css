@@ -1,0 +1,763 @@
+/* WhatsFlow login — exact design tokens & classes */
+.wf-login-root {
+  --green-600: #16A34A;
+  --green-700: #15803D;
+  --green-50:  #F0FDF4;
+  --green-100: #DCFCE7;
+  --ink-900: #111827;
+  --ink-600: #4B5563;
+  --ink-400: #9CA3AF;
+  --line: #E5E7EB;
+  --white: #FFFFFF;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --shadow-soft: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-card: 0 20px 50px rgba(22, 163, 74, 0.18);
+  font-family: 'Comic Relief', 'Comic Sans MS', cursive, system-ui, sans-serif;
+  color: var(--ink-900);
+  background: var(--white);
+  margin: 0;
+  min-height: 100vh;
+}
+
+.wf-login-root *,
+.wf-login-root *::before,
+.wf-login-root *::after {
+  box-sizing: border-box;
+}
+
+.wf-login-root .page {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* ---------- LEFT: FORM PANEL ---------- */
+
+.wf-login-root .panel-form {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 64px;
+  background: var(--white);
+}
+
+.wf-login-root .form-wrap {
+  width: 100%;
+  max-width: 420px;
+}
+
+.wf-login-root .brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 56px;
+}
+
+.wf-login-root .brand-mark {
+  width: 40px;
+  height: 40px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.wf-login-root .brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.wf-login-root .brand-name {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ink-900);
+}
+
+.wf-login-root .brand-name .flow {
+  color: var(--green-600);
+}
+
+.wf-login-root .brand-tagline {
+  font-size: 12px;
+  color: var(--ink-400);
+  margin-top: 2px;
+}
+
+.wf-login-root .heading {
+  margin-bottom: 32px;
+}
+
+.wf-login-root .heading h1 {
+  font-size: 32px;
+  font-weight: 800;
+  margin: 0 0 8px;
+  color: var(--ink-900);
+  letter-spacing: -0.02em;
+}
+
+.wf-login-root .heading p {
+  margin: 0;
+  color: var(--ink-600);
+  font-size: 15px;
+}
+
+.wf-login-root .login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.wf-login-root .login-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.wf-login-root .field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 0 16px;
+  height: 54px;
+  background: var(--white);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.wf-login-root .field:focus-within {
+  border-color: var(--green-600);
+  box-shadow: 0 0 0 4px var(--green-100);
+}
+
+.wf-login-root .field-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 10px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.wf-login-root .field input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  background: transparent;
+  color: var(--ink-900);
+  min-width: 0;
+  height: 100%;
+}
+
+.wf-login-root .field input::placeholder {
+  color: var(--ink-400);
+}
+
+.wf-login-root .field-action {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.wf-login-root .field-action svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.wf-login-root .row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  gap: 12px;
+}
+
+.wf-login-root .checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--ink-900);
+  user-select: none;
+}
+
+.wf-login-root .checkbox input {
+  display: none;
+}
+
+.wf-login-root .checkbox-box {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1.5px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--white);
+  flex-shrink: 0;
+}
+
+.wf-login-root .checkbox-box svg {
+  width: 12px;
+  height: 12px;
+  opacity: 0;
+}
+
+.wf-login-root .checkbox input:checked + .checkbox-box {
+  background: var(--green-600);
+  border-color: var(--green-600);
+}
+
+.wf-login-root .checkbox input:checked + .checkbox-box svg {
+  opacity: 1;
+}
+
+.wf-login-root .link-muted {
+  color: var(--green-600);
+  text-decoration: none;
+  font-weight: 500;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  font-family: inherit;
+}
+
+.wf-login-root .link-muted:hover {
+  text-decoration: underline;
+}
+
+.wf-login-root .btn-primary {
+  height: 54px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--green-600);
+  color: #FFFFFF;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  font-family: inherit;
+  width: 100%;
+}
+
+.wf-login-root .btn-primary:hover:not(:disabled) {
+  background: var(--green-700);
+}
+
+.wf-login-root .btn-primary:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+.wf-login-root .btn-primary svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.wf-login-root .divider {
+  position: relative;
+  text-align: center;
+  margin: 4px 0;
+}
+
+.wf-login-root .divider::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1px solid var(--line);
+}
+
+.wf-login-root .divider span {
+  position: relative;
+  background: var(--white);
+  padding: 0 12px;
+  font-size: 13px;
+  color: var(--ink-400);
+}
+
+.wf-login-root .btn-secondary {
+  height: 54px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--white);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-900);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  font-family: inherit;
+  width: 100%;
+}
+
+.wf-login-root .btn-secondary:hover {
+  background: #F9FAFB;
+}
+
+.wf-login-root .btn-secondary svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.wf-login-root .footer-text {
+  margin-top: 40px;
+  font-size: 14px;
+  color: var(--ink-600);
+  text-align: left;
+}
+
+.wf-login-root .footer-text a {
+  color: var(--green-600);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.wf-login-root .footer-text a:hover {
+  text-decoration: underline;
+}
+
+/* ---------- RIGHT: HERO PANEL ---------- */
+
+.wf-login-root .panel-hero {
+  position: relative;
+  background: linear-gradient(180deg, #EFFBF3 0%, #E7F7EC 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  overflow: hidden;
+}
+
+.wf-login-root .theme-toggle {
+  position: absolute;
+  top: 32px;
+  right: 40px;
+  display: flex;
+  gap: 6px;
+  background: var(--white);
+  border-radius: 999px;
+  padding: 5px;
+  box-shadow: var(--shadow-soft);
+}
+
+.wf-login-root .theme-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.wf-login-root .theme-btn.active {
+  background: var(--green-600);
+}
+
+.wf-login-root .theme-btn svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.wf-login-root .hero-illustration {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  height: 380px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32px;
+}
+
+.wf-login-root .deco-ring {
+  position: absolute;
+  left: 0;
+  top: 45%;
+  width: 90px;
+  height: 90px;
+  border: 2px dashed var(--green-600);
+  border-radius: 50%;
+  opacity: 0.5;
+}
+
+.wf-login-root .deco-plane {
+  position: absolute;
+  left: 30px;
+  bottom: 60px;
+  width: 56px;
+  height: 56px;
+  filter: drop-shadow(0 8px 12px rgba(22, 163, 74, 0.35));
+  display: block;
+}
+
+.wf-login-root .phone-mock {
+  width: 230px;
+  background: #FFFFFF;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  transform: rotate(4deg);
+  z-index: 1;
+}
+
+.wf-login-root .phone-header {
+  background: var(--green-600);
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wf-login-root .phone-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.wf-login-root .phone-avatar svg {
+  width: 14px;
+  height: 14px;
+}
+
+.wf-login-root .phone-bar--header {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+}
+
+.wf-login-root .phone-header-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.wf-login-root .phone-body {
+  padding: 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #FFFFFF;
+}
+
+.wf-login-root .bubble {
+  display: block;
+  height: 30px;
+  border-radius: 8px;
+}
+
+.wf-login-root .bubble-in {
+  width: 85%;
+  background: #F3F4F6;
+}
+
+.wf-login-root .bubble-in.short {
+  width: 55%;
+}
+
+.wf-login-root .bubble-out {
+  align-self: flex-end;
+  width: 75%;
+  height: 46px;
+  background: var(--green-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wf-login-root .bubble-out svg {
+  width: 20px;
+  height: 20px;
+}
+
+.wf-login-root .floating-badge {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  background: #FFFFFF;
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 20px rgba(22, 163, 74, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.wf-login-root .floating-badge svg {
+  width: 22px;
+  height: 22px;
+}
+
+.wf-login-root .badge-1 { top: 22%; right: 0; }
+.wf-login-root .badge-2 { top: 50%; right: -18px; }
+.wf-login-root .badge-3 { bottom: 18%; right: 6%; }
+
+.wf-login-root .hero-copy {
+  text-align: center;
+  max-width: 440px;
+}
+
+.wf-login-root .hero-copy h2 {
+  font-size: 26px;
+  font-weight: 800;
+  margin: 0 0 12px;
+  color: var(--ink-900);
+}
+
+.wf-login-root .hero-copy h2 span {
+  color: var(--green-600);
+}
+
+.wf-login-root .hero-copy p {
+  margin: 0;
+  color: var(--ink-600);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.wf-login-root .feature-row {
+  display: flex;
+  gap: 48px;
+  margin-top: 36px;
+}
+
+.wf-login-root .feature {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-600);
+  font-weight: 500;
+  text-align: center;
+}
+
+.wf-login-root .feature svg {
+  width: 28px;
+  height: 28px;
+  display: block;
+}
+
+/* ---------- LOGIN ↔ SIGNUP: simultaneous panel swap ---------- */
+
+.wf-login-root .panel-form,
+.wf-login-root .panel-hero {
+  grid-row: 1;
+  min-height: 100vh;
+  transition: transform 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* Login: form left (col 1), hero right (col 2) */
+.wf-login-root .page.is-login .panel-form {
+  grid-column: 1;
+  transform: translateX(0);
+  z-index: 2;
+}
+.wf-login-root .page.is-login .panel-hero {
+  grid-column: 2;
+  transform: translateX(0);
+  z-index: 1;
+}
+
+/* Signup: both panels slide at once — hero → left, form → right */
+.wf-login-root .page.is-signup .panel-form {
+  grid-column: 1;
+  transform: translateX(100%);
+  z-index: 2;
+}
+.wf-login-root .page.is-signup .panel-hero {
+  grid-column: 2;
+  transform: translateX(-100%);
+  z-index: 1;
+}
+
+.wf-login-root .heading,
+.wf-login-root .login-form {
+  animation: wf-content-in 0.35s ease 0.15s both;
+}
+
+@keyframes wf-content-in {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.wf-login-root .otp-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-400);
+}
+
+.wf-login-root .footer-text .link-muted,
+.wf-login-root .footer-text button.link-muted {
+  color: var(--green-600);
+  font-weight: 600;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: inherit;
+  font-family: inherit;
+  padding: 0;
+}
+
+.wf-login-root .footer-text .link-muted:hover {
+  text-decoration: underline;
+}
+
+.wf-login-root .field-icon {
+  color: var(--ink-400);
+}
+
+.wf-login-root .field-action {
+  color: var(--ink-400);
+}
+
+/* ---------- DARK MODE ---------- */
+
+.wf-login-root.is-dark {
+  --ink-900: #F9FAFB;
+  --ink-600: #D1D5DB;
+  --ink-400: #9CA3AF;
+  --line: #374151;
+  --white: #111827;
+  --green-50: #052e16;
+  --green-100: #14532d;
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 20px 50px rgba(0, 0, 0, 0.45);
+  background: #0B1220;
+  color: var(--ink-900);
+}
+
+.wf-login-root.is-dark .panel-form {
+  background: #0B1220;
+}
+
+.wf-login-root.is-dark .panel-hero {
+  background: linear-gradient(180deg, #0f1f17 0%, #0c1812 100%);
+}
+
+.wf-login-root.is-dark .field {
+  background: #111827;
+  border-color: #374151;
+}
+
+.wf-login-root.is-dark .field:focus-within {
+  border-color: var(--green-600);
+  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.25);
+}
+
+.wf-login-root.is-dark .field input {
+  color: #F9FAFB;
+}
+
+.wf-login-root.is-dark .checkbox-box {
+  background: #111827;
+  border-color: #374151;
+}
+
+.wf-login-root.is-dark .btn-secondary {
+  background: #111827;
+  border-color: #374151;
+  color: #F9FAFB;
+}
+
+.wf-login-root.is-dark .btn-secondary:hover {
+  background: #1f2937;
+}
+
+.wf-login-root.is-dark .divider span {
+  background: #0B1220;
+}
+
+.wf-login-root.is-dark .theme-toggle {
+  background: #111827;
+}
+
+.wf-login-root.is-dark .theme-btn {
+  color: #9CA3AF;
+}
+
+.wf-login-root.is-dark .phone-mock {
+  background: #1f2937;
+}
+
+.wf-login-root.is-dark .phone-body {
+  background: #1f2937;
+}
+
+.wf-login-root.is-dark .bubble-in {
+  background: #374151;
+}
+
+.wf-login-root.is-dark .floating-badge {
+  background: #111827;
+}
+
+.wf-login-root.is-dark .login-error {
+  background: rgba(185, 28, 28, 0.2);
+  border-color: #7f1d1d;
+  color: #fecaca;
+}
+
+.wf-login-root.is-dark .brand-name {
+  color: #F9FAFB;
+}
+
+/* ---------- RESPONSIVE ---------- */
+
+@media (max-width: 960px) {
+  .wf-login-root .page {
+    grid-template-columns: 1fr;
+  }
+  .wf-login-root .panel-hero {
+    display: none;
+  }
+  .wf-login-root .panel-form {
+    padding: 40px 24px;
+    grid-column: 1 !important;
+    transform: none !important;
+  }
+  .wf-login-root .page.is-signup .panel-form,
+  .wf-login-root .page.is-login .panel-form {
+    transform: none !important;
+  }
+}

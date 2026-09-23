@@ -1,6 +1,6 @@
 export interface ExtensionSettings {
   defaultMode: 'email' | 'whatsapp';
-  delayPreset: 'fast' | 'normal' | 'safe' | 'custom';
+  delayPreset: 'turbo' | 'fast' | 'normal' | 'safe' | 'custom';
   customDelaySeconds: number;
   jitterEnabled: boolean;
   batchSize: number;
@@ -29,7 +29,7 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   jitterEnabled: true,
   batchSize: 10,
   cooldownSeconds: 60,
-  dailyLimit: 200,
+  dailyLimit: 200, // soft cap; raise for volume — higher ban risk if abused
   spinSyntaxEnabled: true,
   sidebarPosition: 'right',
 };

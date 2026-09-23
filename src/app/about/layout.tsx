@@ -2,14 +2,14 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
     title: 'About',
-    description: 'SendStack is a free, open-source bulk email and WhatsApp messaging platform built by Qobouli AI & Dev. Learn about our mission, features, and the team behind the tool.',
+    description: 'Loopx is a bulk email and WhatsApp messaging platform powered by Loopanda. Learn about our features, security, and automation capabilities.',
     alternates: {
         canonical: '/about',
     },
     openGraph: {
-        title: 'About SendStack — Free Bulk Messaging Platform by Qobouli',
-        description: 'Free, open-source bulk email and WhatsApp messaging. Built by Qobouli AI & Dev in Istanbul.',
-        url: 'https://sender.qobouli.com/about',
+        title: 'About Loopx — Bulk Messaging Platform powered by Loopanda',
+        description: 'Bulk email and WhatsApp messaging platform. Powered by Loopanda.',
+        url: 'https://loopx.loopanda.com/about',
     },
 };
 

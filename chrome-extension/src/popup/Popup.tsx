@@ -23,7 +23,7 @@ export default function Popup() {
   function openOptions() { chrome.runtime.openOptionsPage(); }
 
   return (
-    <div style={{ width: '280px', padding: '16px', fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif', fontSize: '13px', background: '#0a0a0a', color: '#fafafa' }}>
+    <div style={{ width: '280px', padding: '16px', fontFamily: '"Comic Relief", "Comic Sans MS", cursive, system-ui, sans-serif', fontSize: '13px', background: '#0a0a0a', color: '#fafafa' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
         <svg width="20" height="20" viewBox="0 0 72 72" fill="none">
           <path d="M36 12L60 24L36 36L12 24L36 12Z" fill="#10b981" opacity="0.9"/>

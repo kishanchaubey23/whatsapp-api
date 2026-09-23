@@ -1,0 +1,480 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// One plan only — enterprise for everyone
+enum PlanCode {
+  enterprise
+}
+
+enum CampaignStatus {
+  draft
+  gated
+  queued
+  running
+  paused
+  completed
+  failed
+  blocked
+  cancelled
+}
+
+enum MessageStatus {
+  pending
+  queued
+  sending
+  sent
+  delivered
+  read
+  failed
+  skipped
+}
+
+enum ProtectionTier {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @db.VarChar(120)
+  email        String   @unique @db.VarChar(160)
+  phone        String?  @unique @db.VarChar(20)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  isActive     Boolean  @default(true) @map("is_active")
+  /// Single plan — always enterprise
+  planCode     PlanCode @default(enterprise) @map("plan_code")
+  planActive   Boolean  @default(true) @map("plan_active")
+  planPriceInr Int      @default(5000) @map("plan_price_inr")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  contacts          Contact[]
+  contactGroups     ContactGroup[]
+  campaigns         Campaign[]
+  messages          Message[]
+  usageDays         UsageDay[]
+  sessions          Session[]
+  whatsappAccounts  WhatsAppAccount[]
+  blastBatches      BlastBatch[]
+  payments          Payment[]
+  autoReplyRules    AutoReplyRule[]
+  autoReplyLogs     AutoReplyLog[]
+  lastLoginAt       DateTime? @map("last_login_at")
+
+  @@map("users")
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+  refunded
+  cancelled
+}
+
+/// Simple payment history for admin (enterprise plan billing)
+model Payment {
+  id          String        @id @default(uuid()) @db.Uuid
+  userId      String        @map("user_id") @db.Uuid
+  amountInr   Int           @map("amount_inr")
+  currency    String        @default("INR") @db.VarChar(8)
+  status      PaymentStatus @default(paid)
+  method      String?       @db.VarChar(64)
+  reference   String?       @db.VarChar(120)
+  note        String?       @db.VarChar(255)
+  paidAt      DateTime?     @map("paid_at")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("payments")
+}
+
+enum WhatsAppAccountStatus {
+  pending_qr
+  connecting
+  ready
+  disconnected
+  banned
+  /// Mid-campaign protocol death / context destroyed
+  session_terminated
+  error
+}
+
+enum BlastBatchStatus {
+  queued
+  processing
+  /// Emergency freeze after session ban / kill-switch
+  paused
+  completed
+  failed
+  cancelled
+  partial
+}
+
+enum BlastJobKind {
+  verify
+  send
+  verify_and_send
+}
+
+/// Linked WA Business device with sticky proxy binding
+model WhatsAppAccount {
+  id              String                @id @default(uuid()) @db.Uuid
+  userId          String                @map("user_id") @db.Uuid
+  label           String                @db.VarChar(120)
+  /// LocalAuth / factory client key
+  sessionKey      String                @unique @map("session_key") @db.VarChar(160)
+  phone           String?               @db.VarChar(20)
+  businessName    String?               @map("business_name") @db.VarChar(160)
+  status          WhatsAppAccountStatus @default(pending_qr)
+  /// Residential proxy host:port (no credentials)
+  proxyHost       String?               @map("proxy_host") @db.VarChar(255)
+  proxyPort       Int?                  @map("proxy_port")
+  proxyUsername   String?               @map("proxy_username") @db.VarChar(120)
+  /// Base password; sticky session suffix applied in factory
+  proxyPassword   String?               @map("proxy_password") @db.VarChar(255)
+  lastError       String?               @map("last_error") @db.Text
+  lastReadyAt     DateTime?             @map("last_ready_at")
+  /// Protection Engine runtime risk (0–100)
+  riskScore       Int                   @default(0) @map("risk_score")
+  lastRiskEvent   String?               @map("last_risk_event") @db.VarChar(64)
+  consecutiveProtocolFailures Int       @default(0) @map("consecutive_protocol_failures")
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+
+  user           User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  blastBatches   BlastBatch[]
+  phoneStates    WhatsAppAccountPhoneState[]
+  autoReplyRules AutoReplyRule[]
+  autoReplyLogs  AutoReplyLog[]
+
+  @@index([userId, status])
+  @@map("whatsapp_accounts")
+}
+
+enum AutoReplyMatchType {
+  contains
+  exact
+  starts_with
+}
+
+/// Keyword-based auto-reply rule bound to a WhatsApp session
+model AutoReplyRule {
+  id                 String   @id @default(uuid()) @db.Uuid
+  userId             String   @map("user_id") @db.Uuid
+  whatsappAccountId  String   @map("whatsapp_account_id") @db.Uuid
+  name               String   @db.VarChar(120)
+  /// Lower number = higher priority
+  priority           Int      @default(1)
+  /// Minutes between auto-replies to the same contact (0 = no cooldown)
+  cooldownMinutes    Int      @default(0) @map("cooldown_minutes")
+  responseBody       String   @map("response_body") @db.Text
+  /// Optional client template id (localStorage templates)
+  templateId         String?  @map("template_id") @db.VarChar(80)
+  isActive           Boolean  @default(true) @map("is_active")
+  responseCount      Int      @default(0) @map("response_count")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  whatsappAccount WhatsAppAccount @relation(fields: [whatsappAccountId], references: [id], onDelete: Cascade)
+  keywords        AutoReplyKeyword[]
+  logs            AutoReplyLog[]
+
+  @@index([userId, isActive])
+  @@index([whatsappAccountId, isActive, priority])
+  @@map("auto_reply_rules")
+}
+
+model AutoReplyKeyword {
+  id        String             @id @default(uuid()) @db.Uuid
+  ruleId    String             @map("rule_id") @db.Uuid
+  keyword   String             @db.VarChar(200)
+  matchType AutoReplyMatchType @default(contains) @map("match_type")
+  createdAt DateTime           @default(now()) @map("created_at")
+
+  rule AutoReplyRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId])
+  @@map("auto_reply_keywords")
+}
+
+model AutoReplyLog {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  ruleId            String   @map("rule_id") @db.Uuid
+  whatsappAccountId String   @map("whatsapp_account_id") @db.Uuid
+  fromPhone         String   @map("from_phone") @db.VarChar(32)
+  matchedKeyword    String?  @map("matched_keyword") @db.VarChar(200)
+  incomingPreview   String?  @map("incoming_preview") @db.VarChar(280)
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rule            AutoReplyRule   @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  whatsappAccount WhatsAppAccount @relation(fields: [whatsappAccountId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId, fromPhone, createdAt])
+  @@index([userId, createdAt])
+  @@index([whatsappAccountId, createdAt])
+  @@map("auto_reply_logs")
+}
+
+/// Bulk verify/send batch (up to 5k numbers) — API enqueues, workers process
+model BlastBatch {
+  id                 String           @id @default(uuid()) @db.Uuid
+  userId             String           @map("user_id") @db.Uuid
+  whatsappAccountId  String           @map("whatsapp_account_id") @db.Uuid
+  kind               BlastJobKind     @default(verify_and_send)
+  status             BlastBatchStatus @default(queued)
+  messageBody        String?          @map("message_body") @db.Text
+  totalNumbers       Int              @default(0) @map("total_numbers")
+  processedCount     Int              @default(0) @map("processed_count")
+  verifiedCount      Int              @default(0) @map("verified_count")
+  sentCount          Int              @default(0) @map("sent_count")
+  failedCount        Int              @default(0) @map("failed_count")
+  skippedCount       Int              @default(0) @map("skipped_count")
+  /// Full payload snapshot (phones array) — prefer chunk jobs for large lists
+  payload            Json?
+  bullJobId          String?          @map("bull_job_id") @db.VarChar(120)
+  lastError          String?          @map("last_error") @db.Text
+  startedAt          DateTime?        @map("started_at")
+  completedAt        DateTime?        @map("completed_at")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  whatsappAccount WhatsAppAccount @relation(fields: [whatsappAccountId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([whatsappAccountId, status])
+  @@map("blast_batches")
+}
+
+enum ContactWaStatus {
+  unverified
+  verified
+  invalid
+  /// Target blocked us / profile unauthorized / unavailable to this session
+  blocked_or_unavailable
+}
+
+/// Platform-wide: is this MSISDN registered on WhatsApp? (NOT account-specific)
+enum GlobalWaRegStatus {
+  on_whatsapp
+  not_on_whatsapp
+  unknown
+}
+
+/// Per WhatsApp Business account: can THIS session reach THIS phone?
+enum AccountPhoneRelationStatus {
+  unknown
+  available
+  blocked_or_unavailable
+  not_registered
+  send_failed
+  send_success
+}
+
+/**
+ * GlobalPhoneRegistry — registration knowledge only.
+ * Never stores tenant CRM, blocked-by-us, or campaign data.
+ */
+model GlobalPhoneRegistry {
+  id               String            @id @default(uuid()) @db.Uuid
+  /// Digits-only canonical phone (E.164 without +)
+  phone            String            @unique @db.VarChar(20)
+  status           GlobalWaRegStatus @default(unknown)
+  checkedAt        DateTime?         @map("checked_at")
+  lastConfirmedAt  DateTime?         @map("last_confirmed_at")
+  checkCount       Int               @default(0) @map("check_count")
+  /// 0–100 optional confidence
+  confidence       Int               @default(50)
+  /// Internal audit only — never expose via API
+  sourceAccountId  String?           @map("source_account_id") @db.Uuid
+  expiresAt        DateTime?         @map("expires_at")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([expiresAt])
+  @@map("global_phone_registry")
+}
+
+/**
+ * WhatsAppAccountPhoneState — account-specific recipient relation.
+ * Independent of GlobalPhoneRegistry registration status.
+ */
+model WhatsAppAccountPhoneState {
+  id                 String                     @id @default(uuid()) @db.Uuid
+  whatsappAccountId  String                     @map("whatsapp_account_id") @db.Uuid
+  phone              String                     @db.VarChar(20)
+  status             AccountPhoneRelationStatus @default(unknown)
+  lastAttemptAt      DateTime?                  @map("last_attempt_at")
+  lastSuccessAt      DateTime?                  @map("last_success_at")
+  lastFailureAt      DateTime?                  @map("last_failure_at")
+  lastFailureReason  String?                    @map("last_failure_reason") @db.VarChar(500)
+  createdAt          DateTime                   @default(now()) @map("created_at")
+  updatedAt          DateTime                   @updatedAt @map("updated_at")
+
+  whatsappAccount WhatsAppAccount @relation(fields: [whatsappAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([whatsappAccountId, phone])
+  @@index([phone])
+  @@index([status])
+  @@map("whatsapp_account_phone_states")
+}
+
+model ContactGroup {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  name        String   @db.VarChar(120)
+  description String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contacts Contact[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("contact_groups")
+}
+
+model Session {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  /// web | extension | server_wa
+  channel          String    @db.VarChar(32)
+  label            String?   @db.VarChar(100)
+  isReady          Boolean   @default(false) @map("is_ready")
+  lastSeenAt       DateTime? @map("last_seen_at")
+  meta             Json?
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaigns Campaign[]
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Contact {
+  id          String          @id @default(uuid()) @db.Uuid
+  userId      String          @map("user_id") @db.Uuid
+  groupId     String?         @map("group_id") @db.Uuid
+  name        String?         @db.VarChar(120)
+  phone       String          @db.VarChar(20)
+  email       String?         @db.VarChar(160)
+  company     String?         @db.VarChar(160)
+  position    String?         @db.VarChar(120)
+  tags        String?         @db.VarChar(500)
+  notes       String?         @db.Text
+  /// Custom variables var1–var10 as JSON object
+  variables   Json?
+  waStatus    ContactWaStatus @default(unverified) @map("wa_status")
+  /// saved_contacts | opted_in | mixed | unknown
+  audienceTag String          @default("opted_in") @map("audience_tag") @db.VarChar(32)
+  meta        Json?
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group    ContactGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  messages Message[]
+
+  @@unique([userId, phone])
+  @@index([userId])
+  @@index([groupId])
+  @@index([waStatus])
+  @@map("contacts")
+}
+
+model Campaign {
+  id                 String          @id @default(uuid()) @db.Uuid
+  userId             String          @map("user_id") @db.Uuid
+  sessionId          String?         @map("session_id") @db.Uuid
+  name               String          @db.VarChar(160)
+  template           String          @db.Text
+  status             CampaignStatus  @default(draft)
+  audienceQuality    String          @default("opted_in") @map("audience_quality") @db.VarChar(32)
+  /// Pacing snapshot used at gate time
+  delayMs            Int             @default(8000) @map("delay_ms")
+  jitterEnabled      Boolean         @default(true) @map("jitter_enabled")
+  batchSize          Int             @default(15) @map("batch_size")
+  cooldownSeconds    Int             @default(45) @map("cooldown_seconds")
+  spinEnabled        Boolean         @default(true) @map("spin_enabled")
+  protectionTier     ProtectionTier? @map("protection_tier")
+  protectionScore    Int?            @map("protection_score")
+  protectionAction   String?         @map("protection_action") @db.VarChar(48)
+  userRiskApproved   Boolean         @default(false) @map("user_risk_approved")
+  totalRecipients    Int             @default(0) @map("total_recipients")
+  sentCount          Int             @default(0) @map("sent_count")
+  failedCount        Int             @default(0) @map("failed_count")
+  skippedCount       Int             @default(0) @map("skipped_count")
+  /// web | extension
+  source             String          @default("web") @db.VarChar(32)
+  startedAt          DateTime?       @map("started_at")
+  completedAt        DateTime?       @map("completed_at")
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session  Session?  @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  messages Message[]
+
+  @@index([userId, status])
+  @@map("campaigns")
+}
+
+model Message {
+  id          String        @id @default(uuid()) @db.Uuid
+  userId      String        @map("user_id") @db.Uuid
+  campaignId  String        @map("campaign_id") @db.Uuid
+  contactId   String?       @map("contact_id") @db.Uuid
+  phone       String        @db.VarChar(20)
+  body        String        @db.Text
+  status      MessageStatus @default(pending)
+  error       String?       @db.Text
+  externalId  String?       @map("external_id") @db.VarChar(120)
+  sentAt      DateTime?     @map("sent_at")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaign Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact  Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@index([campaignId, status])
+  @@index([userId])
+  @@map("messages")
+}
+
+/// Per-user daily usage for quotas (enterprise plan)
+model UsageDay {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  /// YYYY-MM-DD (UTC or account TZ)
+  day           String   @db.VarChar(10)
+  messagesSent  Int      @default(0) @map("messages_sent")
+  messagesFailed Int     @default(0) @map("messages_failed")
+  campaignsRun  Int      @default(0) @map("campaigns_run")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, day])
+  @@map("usage_days")
+}

@@ -1,8 +1,9 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { parseCSV, loadContactsFromStorage, saveContactsToStorage, resolveTemplate, resolveSpin } from '../lib/csv-parser';
 import { sendToBackground } from '../lib/messaging';
 import type { ExtensionSettings } from '../lib/storage';
 import type { Contact } from '../lib/csv-parser';
+import { assessPacingRisk, pacingConfirmMessage, PACING_BOUNDS } from '../lib/pacing';
 import DOMPurify from 'dompurify';
 
 type LogEntry = { recipient: string; status: 'success' | 'error' | 'skipped'; message?: string };
@@ -190,11 +191,21 @@ export default function App() {
   // Sanitize preview for display
   const safePreview = DOMPurify.sanitize(resolvedPreview);
 
+  const pacingRisk = useMemo(() => assessPacingRisk(settings), [settings]);
+
   function startJob() {
     if (contacts.length === 0) { setErrorBanner('Please upload a CSV first.'); return; }
     if (mode === 'email' && !subject) { setErrorBanner('Please enter a subject line.'); return; }
     if (mode === 'email' && !emailColumn) { setErrorBanner('Please select which column contains email addresses.'); return; }
     if (mode === 'whatsapp' && !phoneColumn) { setErrorBanner('Please select which column contains phone numbers.'); return; }
+
+    if (
+      mode === 'whatsapp' &&
+      (pacingRisk.level === 'aggressive' || pacingRisk.level === 'critical')
+    ) {
+      if (!window.confirm(pacingConfirmMessage(pacingRisk))) return;
+    }
+
     setErrorBanner('');
     setStatus('sending');
     setLogs([]);
@@ -218,7 +229,7 @@ export default function App() {
   const progressPct = progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0;
 
   return (
-    <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif', fontSize: '13px', height: '100vh', overflowY: 'auto', background: '#0a0a0a', color: '#fafafa' }}>
+    <div style={{ fontFamily: '"Comic Relief", "Comic Sans MS", cursive, system-ui, sans-serif', fontSize: '13px', height: '100vh', overflowY: 'auto', background: '#0a0a0a', color: '#fafafa' }}>
       {/* Header */}
       <div style={{ background: '#171717', color: '#fafafa', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #262626' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -383,11 +394,23 @@ export default function App() {
         {/* Settings */}
         <section>
           <details>
-            <summary style={{ fontWeight: 600, cursor: 'pointer', color: '#a1a1aa' }}>Settings</summary>
+            <summary style={{ fontWeight: 600, cursor: 'pointer', color: '#a1a1aa' }}>Send pacing</summary>
             <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ background: pacingRisk.bg, border: `1px solid ${pacingRisk.border}`, borderRadius: '6px', padding: '8px 10px', fontSize: '11px' }}>
+                <div style={{ fontWeight: 600, color: pacingRisk.color }}>
+                  {pacingRisk.level === 'safe' ? '✓' : '⚠️'} {pacingRisk.title} · ~{pacingRisk.estimatedMsgPerHour}/hr
+                </div>
+                <div style={{ color: '#a1a1aa', marginTop: '4px', lineHeight: 1.4 }}>{pacingRisk.message}</div>
+                {(pacingRisk.level === 'aggressive' || pacingRisk.level === 'critical') && (
+                  <div style={{ color: pacingRisk.color, marginTop: '6px' }}>
+                    Spamming or sending too fast may get WhatsApp to block your number.
+                  </div>
+                )}
+              </div>
               <div>
                 <label style={{ fontSize: '12px', display: 'block', marginBottom: '2px', color: '#71717a' }}>Delay Preset</label>
                 <select value={settings.delayPreset} onChange={(e) => setSettings({ ...settings, delayPreset: e.target.value as ExtensionSettings['delayPreset'] })} style={{ width: '100%', padding: '4px', background: '#171717', color: '#fafafa', border: '1px solid #262626', borderRadius: '4px' }}>
+                  <option value="turbo">Turbo (2s) — high risk</option>
                   <option value="fast">Fast (5s)</option>
                   <option value="normal">Normal (10s)</option>
                   <option value="safe">Safe (15s)</option>
@@ -396,29 +419,95 @@ export default function App() {
               </div>
               {settings.delayPreset === 'custom' && (
                 <div>
-                  <label style={{ fontSize: '12px', display: 'block', marginBottom: '2px', color: '#71717a' }}>Custom Delay (seconds, 3–60)</label>
-                  <input type="number" min={3} max={60} value={settings.customDelaySeconds} onChange={(e) => setSettings({ ...settings, customDelaySeconds: Math.max(3, Math.min(60, Number(e.target.value))) })} style={{ width: '100%', padding: '4px', background: '#171717', color: '#fafafa', border: '1px solid #262626', borderRadius: '4px' }} />
+                  <label style={{ fontSize: '12px', display: 'block', marginBottom: '2px', color: '#71717a' }}>
+                    Custom Delay ({PACING_BOUNDS.delaySecMin}–{PACING_BOUNDS.delaySecMax}s)
+                  </label>
+                  <input
+                    type="number"
+                    min={PACING_BOUNDS.delaySecMin}
+                    max={PACING_BOUNDS.delaySecMax}
+                    value={settings.customDelaySeconds}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        customDelaySeconds: Math.max(
+                          PACING_BOUNDS.delaySecMin,
+                          Math.min(PACING_BOUNDS.delaySecMax, Number(e.target.value) || 1),
+                        ),
+                      })
+                    }
+                    style={{ width: '100%', padding: '4px', background: '#171717', color: '#fafafa', border: '1px solid #262626', borderRadius: '4px' }}
+                  />
                 </div>
               )}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <input type="checkbox" id="jitter" checked={settings.jitterEnabled} onChange={(e) => setSettings({ ...settings, jitterEnabled: e.target.checked })} />
-                <label htmlFor="jitter" style={{ fontSize: '12px', color: '#a1a1aa' }}>Enable random jitter (±30–50%)</label>
+                <label htmlFor="jitter" style={{ fontSize: '12px', color: '#a1a1aa' }}>Random jitter (±30–50%) — recommended</label>
               </div>
               <div>
-                <label style={{ fontSize: '12px', display: 'block', marginBottom: '2px', color: '#71717a' }}>Batch Size (min 5)</label>
-                <input type="number" min={5} max={100} value={settings.batchSize} onChange={(e) => setSettings({ ...settings, batchSize: Math.max(5, Number(e.target.value)) })} style={{ width: '100%', padding: '4px', background: '#171717', color: '#fafafa', border: '1px solid #262626', borderRadius: '4px' }} />
+                <label style={{ fontSize: '12px', display: 'block', marginBottom: '2px', color: '#71717a' }}>
+                  Batch Size ({PACING_BOUNDS.batchMin}–{PACING_BOUNDS.batchMax})
+                </label>
+                <input
+                  type="number"
+                  min={PACING_BOUNDS.batchMin}
+                  max={PACING_BOUNDS.batchMax}
+                  value={settings.batchSize}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      batchSize: Math.max(
+                        PACING_BOUNDS.batchMin,
+                        Math.min(PACING_BOUNDS.batchMax, Number(e.target.value) || 1),
+                      ),
+                    })
+                  }
+                  style={{ width: '100%', padding: '4px', background: '#171717', color: '#fafafa', border: '1px solid #262626', borderRadius: '4px' }}
+                />
               </div>
               <div>
-                <label style={{ fontSize: '12px', display: 'block', marginBottom: '2px', color: '#71717a' }}>Batch Cool-down (seconds)</label>
-                <input type="number" min={10} max={600} value={settings.cooldownSeconds} onChange={(e) => setSettings({ ...settings, cooldownSeconds: Math.max(10, Number(e.target.value)) })} style={{ width: '100%', padding: '4px', background: '#171717', color: '#fafafa', border: '1px solid #262626', borderRadius: '4px' }} />
+                <label style={{ fontSize: '12px', display: 'block', marginBottom: '2px', color: '#71717a' }}>
+                  Cool-down seconds (0 = none)
+                </label>
+                <input
+                  type="number"
+                  min={PACING_BOUNDS.cooldownSecMin}
+                  max={PACING_BOUNDS.cooldownSecMax}
+                  value={settings.cooldownSeconds}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      cooldownSeconds: Math.max(
+                        PACING_BOUNDS.cooldownSecMin,
+                        Math.min(PACING_BOUNDS.cooldownSecMax, Number(e.target.value) || 0),
+                      ),
+                    })
+                  }
+                  style={{ width: '100%', padding: '4px', background: '#171717', color: '#fafafa', border: '1px solid #262626', borderRadius: '4px' }}
+                />
               </div>
               <div>
                 <label style={{ fontSize: '12px', display: 'block', marginBottom: '2px', color: '#71717a' }}>Daily Limit</label>
-                <input type="number" min={1} max={1000} value={settings.dailyLimit} onChange={(e) => setSettings({ ...settings, dailyLimit: Math.max(1, Number(e.target.value)) })} style={{ width: '100%', padding: '4px', background: '#171717', color: '#fafafa', border: '1px solid #262626', borderRadius: '4px' }} />
+                <input
+                  type="number"
+                  min={PACING_BOUNDS.dailyLimitMin}
+                  max={PACING_BOUNDS.dailyLimitMax}
+                  value={settings.dailyLimit}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      dailyLimit: Math.max(
+                        PACING_BOUNDS.dailyLimitMin,
+                        Math.min(PACING_BOUNDS.dailyLimitMax, Number(e.target.value) || 1),
+                      ),
+                    })
+                  }
+                  style={{ width: '100%', padding: '4px', background: '#171717', color: '#fafafa', border: '1px solid #262626', borderRadius: '4px' }}
+                />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <input type="checkbox" id="spin" checked={settings.spinSyntaxEnabled} onChange={(e) => setSettings({ ...settings, spinSyntaxEnabled: e.target.checked })} />
-                <label htmlFor="spin" style={{ fontSize: '12px', color: '#a1a1aa' }}>Enable spin syntax {'{'+'A|B|C}'}</label>
+                <label htmlFor="spin" style={{ fontSize: '12px', color: '#a1a1aa' }}>Spin syntax {'{'+'A|B|C}'} — recommended</label>
               </div>
               <button
                 onClick={() => sendToBackground('SAVE_SETTINGS', settings as unknown as Record<string, unknown>).catch(() => setErrorBanner('Failed to save settings'))}

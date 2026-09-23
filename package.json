@@ -1,12 +1,16 @@
 {
-  "name": "sendstack",
+  "name": "Loopx",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "backend:dev": "npm run dev --prefix backend",
+    "backend:worker": "npm run dev:worker --prefix backend",
+    "backend:full": "npm run dev:full --prefix backend",
+    "backend:install": "npm install --prefix backend"
   },
   "dependencies": {
     "lucide-react": "^0.564.0",
@@ -16,6 +20,7 @@
     "qrcode": "^1.5.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "socket.io-client": "^4.8.3",
     "whatsapp-web.js": "^1.34.6"
   },
   "devDependencies": {

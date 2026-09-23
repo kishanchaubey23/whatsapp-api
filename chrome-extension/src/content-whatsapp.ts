@@ -130,9 +130,9 @@ async function runWaJob(contacts: Contact[], template: string, settings: Extensi
   const total = contacts.length;
   let sent = 0, failed = 0, skipped = 0, consecutiveFailures = 0;
 
-  const delayMap: Record<string, number> = { fast: 5000, normal: 10000, safe: 15000 };
+  const delayMap: Record<string, number> = { turbo: 2000, fast: 5000, normal: 10000, safe: 15000 };
   const baseDelay = settings.delayPreset === 'custom'
-    ? settings.customDelaySeconds * 1000
+    ? Math.max(1000, Math.min(120000, settings.customDelaySeconds * 1000))
     : (delayMap[settings.delayPreset] ?? 10000);
 
   for (let i = 0; i < contacts.length; i++) {
@@ -288,9 +288,9 @@ async function processCurrentContact(): Promise<void> {
   if (nextIndex % batchSize === 0) {
     await sleep(job.settings.cooldownSeconds * 1000);
   } else {
-    const delayMap: Record<string, number> = { fast: 5000, normal: 10000, safe: 15000 };
+    const delayMap: Record<string, number> = { turbo: 2000, fast: 5000, normal: 10000, safe: 15000 };
     const base = job.settings.delayPreset === 'custom'
-      ? job.settings.customDelaySeconds * 1000
+      ? Math.max(1000, Math.min(120000, job.settings.customDelaySeconds * 1000))
       : (delayMap[job.settings.delayPreset] ?? 10000);
     const delay = job.settings.jitterEnabled ? applyJitter(base) : base;
     await sleep(delay);

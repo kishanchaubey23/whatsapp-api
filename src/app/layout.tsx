@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { LanguageProvider } from "../i18n";
+import { AuthProvider } from "../lib/auth-context";
 import JsonLd from "../components/JsonLd";
 
 const SITE_URL = "https://sender.qobouli.com";
@@ -14,22 +15,21 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: "SendStack — Bulk Email & WhatsApp Messaging Platform | أداة إرسال جماعي",
-    template: "%s | SendStack",
+    default: "Loopx — Bulk Email & WhatsApp Messaging Platform | powered by Loopanda",
+    template: "%s | Loopx",
   },
   description:
-    "Send personalized bulk emails and WhatsApp messages from CSV. Supports Gmail, iCloud+, custom SMTP, spin syntax, anti-ban delays. Free, open-source, fully offline. أرسل رسائل بريد إلكتروني وواتساب جماعية مخصصة.",
+    "Send personalized bulk emails and WhatsApp messages from CSV with Loopx (powered by Loopanda). Supports Gmail, iCloud+, custom SMTP, spin syntax, anti-ban delays. Free, fully offline & secure.",
   keywords: [
-    "sendstack", "bulk email", "bulk whatsapp", "csv email sender", "whatsapp bulk sender",
+    "loopx", "loopanda", "bulk email", "bulk whatsapp", "csv email sender", "whatsapp bulk sender",
     "smtp sender", "email marketing tool", "whatsapp marketing",
     "mass email", "personalized messaging", "spin syntax", "anti-ban whatsapp",
     "إرسال بريد جماعي", "واتساب جماعي", "أداة إرسال رسائل",
     "toplu e-posta", "toplu whatsapp mesaj", "e-posta pazarlama",
-    "qobouli", "open source email sender",
   ],
-  authors: [{ name: "Qobouli AI & Dev", url: "https://qobouli.com" }],
-  creator: "Qobouli AI & Dev",
-  publisher: "Qobouli AI & Dev",
+  authors: [{ name: "Loopanda", url: "https://loopanda.com" }],
+  creator: "Loopanda",
+  publisher: "Loopanda",
   robots: { index: true, follow: true },
   metadataBase: new URL(SITE_URL),
   alternates: {
@@ -47,16 +47,16 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: SITE_URL,
-    siteName: "SendStack by Qobouli",
-    title: "SendStack — Bulk Email & WhatsApp Messaging Platform",
-    description: "Send personalized bulk emails and WhatsApp messages from CSV. Free, open-source, fully offline. Supports Gmail, iCloud+, custom SMTP, spin syntax & anti-ban delays.",
-    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: "SendStack — Bulk Messaging Platform" }],
+    siteName: "Loopx powered by Loopanda",
+    title: "Loopx — Bulk Email & WhatsApp Messaging Platform",
+    description: "Send personalized bulk emails and WhatsApp messages from CSV. Powered by Loopanda. Free, fully offline, secure.",
+    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: "Loopx — Bulk Messaging Platform" }],
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "SendStack — Bulk Email & WhatsApp Messaging | أداة إرسال جماعي",
-    description: "Send personalized bulk emails and WhatsApp messages from CSV. Free, open-source, fully offline.",
+    title: "Loopx — Bulk Email & WhatsApp Messaging | powered by Loopanda",
+    description: "Send personalized bulk emails and WhatsApp messages from CSV. Powered by Loopanda.",
     images: [`${SITE_URL}/opengraph-image`],
   },
 };
@@ -69,11 +69,19 @@ export default function RootLayout({
   return (
     <html lang="en" dir="ltr">
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Comic+Relief:wght@400;700&display=swap"
+          rel="stylesheet"
+        />
         <JsonLd />
       </head>
       <body>
         <LanguageProvider>
-          {children}
+          <AuthProvider>
+            {children}
+          </AuthProvider>
         </LanguageProvider>
       </body>
     </html>

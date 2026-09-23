@@ -1,14 +1,13 @@
 import type { Metadata } from 'next';
+import './dashboard.css';
 
 export const metadata: Metadata = {
-    title: 'Dashboard — Send Bulk Emails & WhatsApp',
-    description: 'Upload your CSV, configure SMTP or WhatsApp, write your template with variables, and send personalized messages in bulk. Free and open-source.',
-    robots: { index: false, follow: false },
-    alternates: {
-        canonical: '/dashboard',
-    },
+  title: 'Dashboard · WhatsFlow',
+  description: 'WhatsFlow enterprise dashboard — devices, contacts, bulk messaging, and analytics.',
+  robots: { index: false, follow: false },
+  alternates: { canonical: '/dashboard' },
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-    return children;
+  return children;
 }

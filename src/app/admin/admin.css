@@ -1,0 +1,375 @@
+.adm-root {
+  --adm-bg: #f1f5f9;
+  --adm-card: #ffffff;
+  --adm-text: #0f172a;
+  --adm-muted: #64748b;
+  --adm-border: #e2e8f0;
+  --adm-green: #16a34a;
+  --adm-red: #dc2626;
+  --adm-amber: #d97706;
+  --adm-blue: #2563eb;
+  min-height: 100vh;
+  background: var(--adm-bg);
+  color: var(--adm-text);
+  font-family: 'Comic Relief', 'Comic Sans MS', cursive, system-ui, sans-serif;
+}
+
+.adm-login-wrap {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: linear-gradient(160deg, #0f172a 0%, #14532d 50%, #0f172a 100%);
+}
+
+.adm-login-card {
+  width: min(400px, 100%);
+  background: #fff;
+  border-radius: 20px;
+  padding: 28px 26px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+}
+
+.adm-login-card h1 {
+  margin: 0 0 6px;
+  font-size: 24px;
+}
+
+.adm-login-card p {
+  margin: 0 0 20px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.adm-login-card label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  margin: 0 0 6px;
+}
+
+.adm-login-card input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font: inherit;
+  font-size: 14px;
+  margin-bottom: 14px;
+}
+
+.adm-login-card button {
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  background: #16a34a;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 12px;
+  cursor: pointer;
+}
+
+.adm-login-card button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.adm-login-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.adm-shell {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  min-height: 100vh;
+}
+
+.adm-side {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 20px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.adm-side .brand {
+  font-weight: 800;
+  font-size: 16px;
+  padding: 8px 10px 18px;
+  color: #fff;
+}
+
+.adm-side .brand span {
+  color: #4ade80;
+}
+
+.adm-side a,
+.adm-side button.nav {
+  display: block;
+  text-decoration: none;
+  color: #94a3b8;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.adm-side a:hover,
+.adm-side button.nav:hover,
+.adm-side a.active {
+  background: rgba(74, 222, 128, 0.12);
+  color: #fff;
+}
+
+.adm-side .side-foot {
+  margin-top: auto;
+  padding: 12px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.adm-main {
+  padding: 22px 24px 40px;
+}
+
+.adm-main h1 {
+  margin: 0 0 6px;
+  font-size: 24px;
+}
+
+.adm-main .sub {
+  margin: 0 0 20px;
+  color: var(--adm-muted);
+  font-size: 13px;
+}
+
+.adm-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.adm-stat {
+  background: var(--adm-card);
+  border: 1px solid var(--adm-border);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+}
+
+.adm-stat span {
+  display: block;
+  font-size: 12px;
+  color: var(--adm-muted);
+  margin-bottom: 6px;
+}
+
+.adm-stat strong {
+  font-size: 26px;
+  letter-spacing: -0.03em;
+}
+
+.adm-stat.green strong {
+  color: var(--adm-green);
+}
+.adm-stat.red strong {
+  color: var(--adm-red);
+}
+.adm-stat.amber strong {
+  color: var(--adm-amber);
+}
+.adm-stat.blue strong {
+  color: var(--adm-blue);
+}
+
+.adm-card {
+  background: var(--adm-card);
+  border: 1px solid var(--adm-border);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+}
+
+.adm-toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  align-items: center;
+}
+
+.adm-toolbar input {
+  flex: 1;
+  min-width: 180px;
+  border: 1px solid var(--adm-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.adm-toolbar button {
+  border: 1px solid var(--adm-border);
+  background: #fff;
+  border-radius: 10px;
+  padding: 9px 14px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.adm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.adm-table th {
+  text-align: left;
+  padding: 10px 8px;
+  color: var(--adm-muted);
+  border-bottom: 1px solid var(--adm-border);
+  font-weight: 600;
+}
+
+.adm-table td {
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--adm-border);
+  vertical-align: middle;
+}
+
+.adm-badge {
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
+.adm-badge.on {
+  background: #dcfce7;
+  color: #166534;
+}
+.adm-badge.off {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+.adm-badge.warn {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.adm-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 7px 11px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-right: 6px;
+}
+
+.adm-btn.primary {
+  background: #2563eb;
+  color: #fff;
+}
+.adm-btn.danger {
+  background: #dc2626;
+  color: #fff;
+}
+.adm-btn.ok {
+  background: #16a34a;
+  color: #fff;
+}
+.adm-btn.ghost {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+}
+
+.adm-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.adm-detail-grid h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+
+.adm-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.adm-meta div {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--adm-border);
+}
+
+.adm-meta span {
+  display: block;
+  font-size: 11px;
+  color: var(--adm-muted);
+}
+
+.adm-meta strong {
+  font-size: 14px;
+}
+
+.adm-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.adm-back {
+  display: inline-block;
+  margin-bottom: 12px;
+  color: #2563eb;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .adm-shell {
+    grid-template-columns: 1fr;
+  }
+  .adm-side {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .adm-side .side-foot {
+    display: none;
+  }
+  .adm-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -67,8 +67,8 @@ export default function FaqPage() {
                 <nav className="landing-nav">
                     <div className="landing-nav-inner">
                         <Link href="/" className="nav-brand">
-                            <img src="/logo.svg" alt="SendStack" width={32} height={32} />
-                            <span className="nav-brand-text">SendStack</span>
+                            <img src="/logo.svg" alt="Loopx" width={32} height={32} />
+                            <span className="nav-brand-text">Loopx</span>
                         </Link>
                         <button className="nav-toggle" onClick={() => setNavOpen(!navOpen)} aria-label="Toggle navigation">
                             {navOpen ? <X size={22} /> : <Menu size={22} />}
@@ -103,15 +103,6 @@ export default function FaqPage() {
                             <Link href="/dashboard" className="platform-cta" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                                 {t('faq.tryIt')} <ArrowRight size={14} />
                             </Link>
-                            <a
-                                href="https://github.com/mohamed-arabi16/SendStack/issues"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="platform-cta"
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                            >
-                                {t('faq.askOnGithub')} <ArrowRight size={14} />
-                            </a>
                         </div>
                     </section>
                 </div>
@@ -119,16 +110,13 @@ export default function FaqPage() {
                 <footer className="landing-footer">
                     <div className="footer-inner">
                         <div className="footer-brand">
-                            <img src="/logo.svg" alt="SendStack" width={24} height={24} />
-                            <span>SendStack</span>
+                            <img src="/logo.svg" alt="Loopx" width={24} height={24} />
+                            <span>Loopx</span>
                         </div>
                         <div className="footer-links">
                             <Link href="/">{t('footer.home')}</Link>
                             <Link href="/about">{t('nav.about')}</Link>
                             <Link href="/privacy">{t('footer.privacyPolicy')}</Link>
-                            <a href="https://github.com/mohamed-arabi16/SendStack" target="_blank" rel="noopener noreferrer">
-                                {t('footer.sourceCode')}
-                            </a>
                         </div>
                     </div>
                 </footer>

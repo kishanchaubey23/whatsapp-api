@@ -15,8 +15,8 @@ export default function PrivacyPage() {
                 <nav className="landing-nav">
                     <div className="landing-nav-inner">
                         <Link href="/" className="nav-brand">
-                            <img src="/logo.svg" alt="SendStack" width={32} height={32} />
-                            <span className="nav-brand-text">SendStack</span>
+                            <img src="/logo.svg" alt="Loopx" width={32} height={32} />
+                            <span className="nav-brand-text">Loopx</span>
                         </Link>
                         <button className="nav-toggle" onClick={() => setNavOpen(!navOpen)} aria-label="Toggle navigation">
                             {navOpen ? <X size={22} /> : <Menu size={22} />}
@@ -129,46 +129,18 @@ export default function PrivacyPage() {
                     <section className="privacy-section">
                         <h2>{t('privacy.changesTitle')}</h2>
                         <p>{t('privacy.changesDesc')}</p>
-                        <p>
-                            <a
-                                href="https://github.com/mohamed-arabi16/SendStack/blob/main/chrome-extension/store/privacy-policy.md"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="privacy-repo-link"
-                            >
-                                github.com/mohamed-arabi16/SendStack
-                            </a>
-                        </p>
-                    </section>
-
-                    <section className="privacy-section">
-                        <h2>{t('privacy.contactTitle')}</h2>
-                        <p>{t('privacy.contactDesc')}</p>
-                        <p>
-                            <a
-                                href="https://github.com/mohamed-arabi16/SendStack/issues"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="privacy-repo-link"
-                            >
-                                github.com/mohamed-arabi16/SendStack/issues
-                            </a>
-                        </p>
                     </section>
                 </div>
 
                 <footer className="landing-footer">
                     <div className="footer-inner">
                         <div className="footer-brand">
-                            <img src="/logo.svg" alt="SendStack" width={24} height={24} />
-                            <span>SendStack</span>
+                            <img src="/logo.svg" alt="Loopx" width={24} height={24} />
+                            <span>Loopx</span>
                         </div>
                         <div className="footer-links">
                             <Link href="/">{t('footer.home')}</Link>
                             <Link href="/dashboard">{t('footer.webApp')}</Link>
-                            <a href="https://github.com/mohamed-arabi16/SendStack" target="_blank" rel="noopener noreferrer">
-                                {t('footer.sourceCode')}
-                            </a>
                         </div>
                     </div>
                 </footer>

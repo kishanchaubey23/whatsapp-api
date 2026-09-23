@@ -8,7 +8,22 @@ import {
     RefreshCw, Eye, ChevronLeft, ChevronRight, Clock, Zap, Mail, ArrowRight, MessageCircle, Phone,
     Paperclip, Calendar, X
 } from 'lucide-react';
-import { resolveSpin, applyJitter } from '@/lib/whatsapp-utils';
+import {
+    resolveSpin,
+    resolveBaseDelayMs,
+    DELAY_PRESET_LABELS,
+    PACING_BOUNDS,
+    type DelayPreset,
+} from '@/lib/whatsapp-utils';
+import {
+    evaluateCampaign,
+    optimizePlan,
+    nextDelayMs,
+    formatDuration,
+    ENTERPRISE_DEFAULTS,
+    type AudienceQuality,
+    type ProtectionVerdict,
+} from '@/lib/protection-engine';
 
 type CSVRow = Record<string, string>;
 type LogEntry = {
@@ -19,21 +34,44 @@ type LogEntry = {
     /** WhatsApp message ID — used to track ACK status */
     messageId?: string;
 };
-type WAStatus = 'disconnected' | 'reconnecting' | 'qr' | 'ready';
+type WAStatus = 'disconnected' | 'reconnecting' | 'qr' | 'verifying' | 'ready' | 'rejected';
+
+type WAProfileReport = {
+    isBusiness: boolean;
+    isEnterprise: boolean;
+    allowed: boolean;
+    rejectionReason: string | null;
+    phone?: string;
+    pushname?: string;
+    businessName?: string | null;
+    about?: string | null;
+    hasProfilePic: boolean;
+    profilePicUrl?: string | null;
+    completeness: {
+        score: number;
+        max: number;
+        missing: string[];
+        checks: {
+            businessAccount: boolean;
+            profilePicture: boolean;
+            about: boolean;
+            displayName: boolean;
+            businessName: boolean;
+        };
+    };
+};
 /** ACK level: 0=Pending 1=Sent 2=Delivered 3=Read */
 type AckLevel = 0 | 1 | 2 | 3;
-
-/** Milliseconds for each WhatsApp delay preset */
-const WA_DELAY_PRESETS = { fast: 5000, normal: 10000, safe: 15000 } as const;
 
 /** Max seconds to wait for WhatsApp reconnection during a mid-send disconnect */
 const MAX_RECONNECT_WAIT_SECONDS = 120;
 
-/** Maximum additional delay imposed when rate-limiting is detected (ms) */
-const MAX_RATE_LIMIT_PENALTY_MS = 60000;
-
-/** Delay increment per rate-limit hit (ms) */
-const RATE_LIMIT_INCREMENT_MS = 10000;
+const TIER_STYLE: Record<string, { color: string; bg: string; border: string }> = {
+    LOW: { color: 'var(--green)', bg: 'var(--green-bg)', border: 'var(--green)' },
+    MODERATE: { color: 'var(--amber)', bg: 'var(--amber-bg)', border: 'var(--amber)' },
+    HIGH: { color: 'var(--amber)', bg: 'var(--amber-bg)', border: 'var(--amber)' },
+    CRITICAL: { color: 'var(--red)', bg: 'var(--red-bg)', border: 'var(--red)' },
+};
 
 /** Allowed MIME types for media attachment */
 const ALLOWED_MEDIA_TYPES: Record<string, string> = {
@@ -81,14 +119,16 @@ export default function EmailDashboard() {
     const [sendDelay, setSendDelay] = useState(2); // seconds between emails
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // --- WhatsApp Anti-Ban Settings (Phase 2) ---
-    const [waDelayPreset, setWaDelayPreset] = useState<'fast' | 'normal' | 'safe' | 'custom'>('normal');
-    const [waCustomDelay, setWaCustomDelay] = useState(10);
-    const [waJitter, setWaJitter] = useState(true);
-    const [waSpinEnabled, setWaSpinEnabled] = useState(true);
-    const [waBatchSize, setWaBatchSize] = useState(10);
-    const [waCoolDown, setWaCoolDown] = useState(60);
-    const [waDailyLimit, setWaDailyLimit] = useState(200);
+    // --- Enterprise Protection Engine (₹5000 plan for all) ---
+    const [waDelayPreset, setWaDelayPreset] = useState<DelayPreset>('custom');
+    const [waCustomDelay, setWaCustomDelay] = useState(ENTERPRISE_DEFAULTS.delayMs / 1000);
+    const [waJitter, setWaJitter] = useState(ENTERPRISE_DEFAULTS.jitterEnabled);
+    const [waSpinEnabled, setWaSpinEnabled] = useState(ENTERPRISE_DEFAULTS.spinEnabled);
+    const [waBatchSize, setWaBatchSize] = useState(ENTERPRISE_DEFAULTS.batchSize);
+    const [waCoolDown, setWaCoolDown] = useState(ENTERPRISE_DEFAULTS.cooldownSeconds);
+    const [waDailyLimit, setWaDailyLimit] = useState(ENTERPRISE_DEFAULTS.dailyLimit);
+    const [waAudienceQuality, setWaAudienceQuality] = useState<AudienceQuality>('opted_in');
+    const [waHighRiskApproved, setWaHighRiskApproved] = useState(false);
     // WhatsApp runtime state
     const [waCoolDownActive, setWaCoolDownActive] = useState(false);
     const [waCoolDownRemaining, setWaCoolDownRemaining] = useState(0);
@@ -100,6 +140,8 @@ export default function EmailDashboard() {
     const [waQR, setWaQR] = useState<string | null>(null);
     const [waConnecting, setWaConnecting] = useState(false);
     const [waInitError, setWaInitError] = useState<string | null>(null);
+    const [waProfile, setWaProfile] = useState<WAProfileReport | null>(null);
+    const [waRejectMsg, setWaRejectMsg] = useState<string | null>(null);
     // Task 18 — mid-send disconnect / rate-limit state
     const [waReconnectPrompt, setWaReconnectPrompt] = useState(false);
     const [waEffectiveDelay, setWaEffectiveDelay] = useState<number | null>(null); // override when rate-limited
@@ -136,9 +178,22 @@ export default function EmailDashboard() {
             try {
                 const res = await fetch('/api/whatsapp/status');
                 if (res.ok) {
-                    const json = await res.json() as { status: WAStatus; error?: string };
+                    const json = await res.json() as {
+                        status: WAStatus;
+                        error?: string;
+                        profile?: WAProfileReport;
+                    };
                     setWaStatus(json.status);
                     setWaInitError(json.error ?? null);
+                    if (json.profile) setWaProfile(json.profile);
+                    if (json.status === 'rejected') {
+                        setWaRejectMsg(json.error || json.profile?.rejectionReason || 'Personal WhatsApp is not allowed.');
+                        setWaConnecting(false);
+                    }
+                    if (json.status === 'ready' || json.status === 'verifying') {
+                        setWaRejectMsg(null);
+                        setWaConnecting(false);
+                    }
                 }
             } catch { /* ignore */ }
         };
@@ -267,11 +322,59 @@ export default function EmailDashboard() {
         });
     }, []);
 
-    // --- WhatsApp Helpers (Phase 2) ---
-    /** Return base delay in ms based on the selected preset */
+    // --- WhatsApp Helpers + Protection Engine ---
     const getWABaseDelay = useCallback((): number => {
-        return waDelayPreset === 'custom' ? waCustomDelay * 1000 : WA_DELAY_PRESETS[waDelayPreset];
+        return resolveBaseDelayMs(waDelayPreset, waCustomDelay);
     }, [waDelayPreset, waCustomDelay]);
+
+    const protectionVerdict: ProtectionVerdict = useMemo(
+        () =>
+            evaluateCampaign({
+                recipientCount: data.length,
+                delayMs: getWABaseDelay(),
+                jitterEnabled: waJitter,
+                batchSize: waBatchSize,
+                cooldownSeconds: waCoolDown,
+                dailyLimit: waDailyLimit,
+                alreadySentToday: waDailyCount,
+                spinEnabled: waSpinEnabled,
+                audienceQuality: waAudienceQuality,
+                userApproval: waHighRiskApproved,
+            }),
+        [
+            data.length,
+            getWABaseDelay,
+            waJitter,
+            waBatchSize,
+            waCoolDown,
+            waDailyLimit,
+            waDailyCount,
+            waSpinEnabled,
+            waAudienceQuality,
+            waHighRiskApproved,
+        ],
+    );
+
+    useEffect(() => {
+        setWaHighRiskApproved(false);
+    }, [waDelayPreset, waCustomDelay, waJitter, waBatchSize, waCoolDown, waDailyLimit, waSpinEnabled, waAudienceQuality, data.length]);
+
+    const applyEnterprisePlan = useCallback(() => {
+        const plan = optimizePlan(Math.max(1, data.length), {
+            audienceQuality: waAudienceQuality,
+            alreadySentToday: waDailyCount,
+            dailyLimit: waDailyLimit,
+            targetTier: 'LOW',
+        });
+        setWaDelayPreset('custom');
+        setWaCustomDelay(plan.delayMs / 1000);
+        setWaJitter(plan.jitterEnabled);
+        setWaSpinEnabled(plan.spinEnabled);
+        setWaBatchSize(plan.batchSize);
+        setWaCoolDown(plan.cooldownSeconds);
+        setWaDailyLimit(plan.dailyLimit);
+        setWaHighRiskApproved(false);
+    }, [data.length, waAudienceQuality, waDailyCount, waDailyLimit]);
 
     /** Persist the incremented daily count to localStorage */
     const incrementDailyCount = useCallback((n: number) => {
@@ -469,12 +572,51 @@ export default function EmailDashboard() {
 
     // --- Send WhatsApp ---
     const handleSendWhatsApp = async () => {
+        // Protection Engine gate
+        const gate = evaluateCampaign({
+            recipientCount: data.length,
+            delayMs: getWABaseDelay(),
+            jitterEnabled: waJitter,
+            batchSize: waBatchSize,
+            cooldownSeconds: waCoolDown,
+            dailyLimit: waDailyLimit,
+            alreadySentToday: waDailyCount,
+            spinEnabled: waSpinEnabled,
+            audienceQuality: waAudienceQuality,
+            userApproval: waHighRiskApproved,
+        });
+
+        if (gate.blocked || gate.action === 'BLOCK') {
+            alert(
+                `🚫 Campaign blocked (CRITICAL)\n\n${gate.message}\n\n` +
+                    `Apply the enterprise recommended plan, or split your list.\n\n` +
+                    gate.reductions.slice(0, 4).join('\n'),
+            );
+            return;
+        }
+
+        if (gate.action === 'REQUIRE_REDUCTION_OR_APPROVAL') {
+            const ok = window.confirm(
+                `⚠️ HIGH risk — ${gate.title}\n\n${gate.message}\n\n` +
+                    `Recommended: apply enterprise safe-fast plan (~${formatDuration(gate.recommendedPlan.estimatedDurationSec)}).\n\n` +
+                    `${gate.liabilityNotice}\n\n` +
+                    `OK = I accept ban risk and send anyway\nCancel = stop (then apply recommended plan)`,
+            );
+            if (!ok) return;
+            setWaHighRiskApproved(true);
+        } else if (gate.action === 'ALLOW_WITH_WARNING' && gate.tier === 'MODERATE') {
+            const ok = window.confirm(
+                `⚠️ ${gate.title}\n\n${gate.message}\n\n` +
+                    `~${gate.recommendedPlan.msgsPerHour} msg/hr recommended band.\nContinue?`,
+            );
+            if (!ok) return;
+        }
+
         // Task 21 — If scheduled, wait until the target time
         if (waScheduleEnabled && waScheduledTime) {
             const target = new Date(waScheduledTime).getTime();
             const now = Date.now();
             if (target > now) {
-                // Wait until scheduled time
                 await new Promise(r => setTimeout(r, target - now));
             }
         }
@@ -482,7 +624,7 @@ export default function EmailDashboard() {
         // Check daily limit (Task 12)
         const dailyRemaining = waDailyLimit - waDailyCount;
         if (!waLimitOverridden && dailyRemaining <= 0) {
-            alert('Daily sending limit reached. Override the limit in the settings to continue.');
+            alert('Daily sending limit reached. Override the limit in the settings to continue (higher ban risk).');
             return;
         }
 
@@ -492,8 +634,9 @@ export default function EmailDashboard() {
         setWaReconnectPrompt(false);
         setWaEffectiveDelay(null);
         let sentCount = 0;
-        // Track rate-limit hits to progressively increase delay
         let rateLimitHits = 0;
+        let consecutiveSuccesses = 0;
+        let consecutiveFailures = 0;
 
         for (let i = 0; i < data.length; i++) {
             // Task 18 — Pause if client disconnected mid-send
@@ -596,6 +739,8 @@ export default function EmailDashboard() {
                 }
 
                 sentCount++;
+                consecutiveSuccesses++;
+                consecutiveFailures = 0;
                 // Task 20 — seed the ACK map with pending status
                 if (messageId) {
                     const id = messageId;
@@ -608,12 +753,11 @@ export default function EmailDashboard() {
                     messageId,
                 }]);
 
-                // Reset rate-limit counter on success
-                if (rateLimitHits > 0) rateLimitHits = 0;
-
             } catch (err: unknown) {
                 const errMessage = err instanceof Error ? err.message : 'Unknown error';
                 const errType = (err as { errorType?: string }).errorType;
+                consecutiveFailures++;
+                consecutiveSuccesses = 0;
 
                 // Task 18 — Handle specific error types
                 if (errType === 'disconnected') {
@@ -621,9 +765,7 @@ export default function EmailDashboard() {
                 }
                 if (errType === 'rate_limited') {
                     rateLimitHits++;
-                    const penalty = Math.min(MAX_RATE_LIMIT_PENALTY_MS, getWABaseDelay() + rateLimitHits * RATE_LIMIT_INCREMENT_MS);
-                    setWaEffectiveDelay(penalty);
-                    setLogs(prev => [...prev, { email: '⚡', status: 'info', message: `Rate limit detected — increasing delay to ${(penalty / 1000).toFixed(0)}s` }]);
+                    setLogs(prev => [...prev, { email: '⚡', status: 'info', message: `Rate limit — Protection Engine backing off (hit #${rateLimitHits})` }]);
                 }
 
                 setLogs(prev => [...prev, { email: `${name} (${phone})`, status: 'error', message: errMessage, errorType: errType }]);
@@ -633,7 +775,7 @@ export default function EmailDashboard() {
 
             if (i < data.length - 1) {
                 // Batch cool-down pause (Task 11): trigger after every batchSize *sent* messages
-                if (sentCount > 0 && sentCount % waBatchSize === 0) {
+                if (sentCount > 0 && waBatchSize > 0 && sentCount % waBatchSize === 0 && waCoolDown > 0) {
                     setWaCoolDownActive(true);
                     let cd = waCoolDown;
                     setWaCoolDownRemaining(cd);
@@ -645,12 +787,18 @@ export default function EmailDashboard() {
                     }
                     setWaCoolDownActive(false);
                 } else {
-                    // Regular delay with optional jitter (Tasks 8 & 9)
-                    // Use overridden delay when rate-limited (Task 18)
-                    const baseMs = waEffectiveDelay ?? getWABaseDelay();
-                    const actualMs = waJitter ? applyJitter(baseMs) : baseMs;
+                    // Adaptive delay: min time when healthy, auto-slow on failures/rate-limits
+                    const actualMs = nextDelayMs({
+                        baseDelayMs: getWABaseDelay(),
+                        jitterEnabled: waJitter,
+                        consecutiveSuccesses,
+                        consecutiveFailures,
+                        rateLimitHitsSession: rateLimitHits,
+                        progressRatio: (i + 1) / data.length,
+                    });
+                    setWaEffectiveDelay(actualMs);
                     const actualSec = (actualMs / 1000).toFixed(1);
-                    setLogs(prev => [...prev, { email: '⏳', status: 'info', message: `Waiting ${actualSec}s before next message…` }]);
+                    setLogs(prev => [...prev, { email: '⏳', status: 'info', message: `Protection wait ${actualSec}s…` }]);
                     await new Promise(r => setTimeout(r, actualMs));
                 }
             }
@@ -736,7 +884,17 @@ export default function EmailDashboard() {
                         </h3>
                         {waStatus === 'ready' && (
                             <span style={{ background: 'var(--green-bg)', color: 'var(--green)', border: '1px solid var(--green)', borderRadius: 'var(--radius-sm)', padding: '3px 12px', fontSize: 13, fontWeight: 500 }}>
-                                ✅ WhatsApp Connected
+                                ✅ Business Connected
+                            </span>
+                        )}
+                        {waStatus === 'verifying' && (
+                            <span style={{ background: 'var(--amber-bg)', color: 'var(--amber)', border: '1px solid var(--amber)', borderRadius: 'var(--radius-sm)', padding: '3px 12px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <RefreshCw className="w-3 h-3 animate-spin" /> Verifying Business…
+                            </span>
+                        )}
+                        {waStatus === 'rejected' && (
+                            <span style={{ background: 'var(--red-bg)', color: 'var(--red)', border: '1px solid var(--red)', borderRadius: 'var(--radius-sm)', padding: '3px 12px', fontSize: 13 }}>
+                                🚫 Personal WA rejected
                             </span>
                         )}
                         {waStatus === 'qr' && (
@@ -756,7 +914,11 @@ export default function EmailDashboard() {
                         )}
                     </div>
 
-                    {waStatus === 'disconnected' && (
+                    <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8 }}>
+                        Only <strong>WhatsApp Business</strong> accounts are allowed. After QR scan we verify account type and profile completeness (photo, about, business name).
+                    </p>
+
+                    {(waStatus === 'disconnected' || waStatus === 'rejected') && (
                         <>
                             <button
                                 onClick={handleConnectWhatsApp}
@@ -768,12 +930,12 @@ export default function EmailDashboard() {
                                     ? <RefreshCw className="w-4 h-4 animate-spin" />
                                     : <MessageCircle className="w-4 h-4" />
                                 }
-                                {waConnecting ? 'Connecting…' : 'Connect WhatsApp'}
+                                {waConnecting ? 'Connecting…' : 'Connect WhatsApp Business'}
                             </button>
-                            {waInitError && (
-                                <p style={{ fontSize: 12, color: 'var(--red)', marginTop: 8, wordBreak: 'break-word' }}>
-                                    ⚠️ {waInitError}
-                                </p>
+                            {(waRejectMsg || waInitError) && (
+                                <div className="wf-reject-box">
+                                    ⚠️ {waRejectMsg || waInitError}
+                                </div>
                             )}
                         </>
                     )}
@@ -784,16 +946,22 @@ export default function EmailDashboard() {
                         </p>
                     )}
 
+                    {waStatus === 'verifying' && (
+                        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 8 }}>
+                            Checking Business account flag and profile (picture, about, business name)…
+                        </p>
+                    )}
+
                     {waStatus === 'qr' && (
                         <div style={{ marginTop: 12, textAlign: 'center' }}>
                             {waQR ? (
                                 <>
                                     <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8 }}>
-                                        Open WhatsApp on your phone → Menu → Linked Devices → Link a Device
+                                        Open <strong>WhatsApp Business</strong> on your phone → Linked Devices → Link a Device
                                     </p>
                                     <Image
                                         src={waQR}
-                                        alt="Scan this QR code with WhatsApp mobile app to link your device"
+                                        alt="Scan this QR code with WhatsApp Business to link your device"
                                         width={220}
                                         height={220}
                                         unoptimized
@@ -812,7 +980,42 @@ export default function EmailDashboard() {
                         </div>
                     )}
 
-                    {waStatus === 'ready' && (
+                    {waStatus === 'ready' && waProfile && (
+                        <div className="wf-profile-card">
+                            <h4>
+                                Business profile · completeness {waProfile.completeness.score}/{waProfile.completeness.max}
+                            </h4>
+                            <div className="wf-profile-grid">
+                                <div className={waProfile.completeness.checks.businessAccount ? 'wf-check-ok' : 'wf-check-bad'}>
+                                    {waProfile.completeness.checks.businessAccount ? '✓' : '✗'} Business account
+                                </div>
+                                <div className={waProfile.completeness.checks.profilePicture ? 'wf-check-ok' : 'wf-check-bad'}>
+                                    {waProfile.completeness.checks.profilePicture ? '✓' : '✗'} Profile picture
+                                </div>
+                                <div className={waProfile.completeness.checks.about ? 'wf-check-ok' : 'wf-check-bad'}>
+                                    {waProfile.completeness.checks.about ? '✓' : '✗'} About
+                                </div>
+                                <div className={waProfile.completeness.checks.displayName ? 'wf-check-ok' : 'wf-check-bad'}>
+                                    {waProfile.completeness.checks.displayName ? '✓' : '✗'} Display name
+                                </div>
+                                <div className={waProfile.completeness.checks.businessName ? 'wf-check-ok' : 'wf-check-bad'}>
+                                    {waProfile.completeness.checks.businessName ? '✓' : '✗'} Business name
+                                </div>
+                            </div>
+                            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8 }}>
+                                {waProfile.pushname || waProfile.businessName || 'Business'}
+                                {waProfile.phone ? ` · +${waProfile.phone}` : ''}
+                                {waProfile.about ? ` · “${waProfile.about.slice(0, 80)}${waProfile.about.length > 80 ? '…' : ''}”` : ''}
+                            </p>
+                            {waProfile.completeness.missing.filter((m) => !m.includes('personal')).length > 0 && (
+                                <p style={{ fontSize: 12, color: 'var(--amber)', marginTop: 6 }}>
+                                    Tip: complete missing fields in WhatsApp Business for better deliverability: {waProfile.completeness.missing.filter((m) => !m.toLowerCase().includes('personal')).join(', ')}
+                                </p>
+                            )}
+                        </div>
+                    )}
+
+                    {(waStatus === 'ready' || waStatus === 'verifying' || waStatus === 'qr') && (
                         <button
                             onClick={handleDisconnectWhatsApp}
                             className="btn-secondary"
@@ -1200,24 +1403,102 @@ export default function EmailDashboard() {
                         )}
                     </div>
 
-                    {/* WhatsApp Anti-Ban Settings Panel (Phase 2, Tasks 8–12) */}
+                    {/* Enterprise Protection Engine */}
                     {mode === 'whatsapp' && (
                         <div className="card">
                             <h3 className="card-title">
-                                <Zap className="w-4 h-4" /> WhatsApp Anti-Ban Settings
+                                <Zap className="w-4 h-4" /> Enterprise Protection Engine
                             </h3>
+                            <p className="field-hint" style={{ marginBottom: 12 }}>
+                                ₹5000 enterprise plan: auto-protects real business bulk (saved or unsaved contacts). Delivers to every number in minimum safe time. Gate: LOW allow · MODERATE warn · HIGH reduce/approve · CRITICAL block.
+                            </p>
+
+                            {/* Live protection gate */}
+                            {(() => {
+                                const st = TIER_STYLE[protectionVerdict.tier] ?? TIER_STYLE.MODERATE;
+                                const rec = protectionVerdict.recommendedPlan;
+                                return (
+                                    <div
+                                        style={{
+                                            background: st.bg,
+                                            border: `1px solid ${st.border}`,
+                                            borderRadius: 'var(--radius-sm)',
+                                            padding: '12px 14px',
+                                            marginBottom: 14,
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', alignItems: 'baseline' }}>
+                                            <strong style={{ color: st.color, fontSize: 14 }}>
+                                                {protectionVerdict.tier === 'LOW' ? '✓' : protectionVerdict.tier === 'CRITICAL' ? '🚫' : '⚠️'}{' '}
+                                                {protectionVerdict.tier}: {protectionVerdict.title}
+                                            </strong>
+                                            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                                                score {protectionVerdict.score}/100 · action {protectionVerdict.action}
+                                            </span>
+                                        </div>
+                                        <p style={{ fontSize: 13, marginTop: 6, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                                            {protectionVerdict.message}
+                                        </p>
+                                        <p style={{ fontSize: 12, marginTop: 8, color: 'var(--text-secondary)' }}>
+                                            Recommended safe-fast: {(rec.delayMs / 1000).toFixed(0)}s delay · batch {rec.batchSize} · cool-down {rec.cooldownSeconds}s · ~{rec.msgsPerHour} msg/hr · ~{formatDuration(rec.estimatedDurationSec)} for {data.length || 0} contacts
+                                        </p>
+                                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+                                            <button type="button" className="btn-secondary" onClick={applyEnterprisePlan}>
+                                                Apply enterprise safe-fast plan
+                                            </button>
+                                            {protectionVerdict.canProceedWithApproval && (
+                                                <button
+                                                    type="button"
+                                                    className="btn-secondary"
+                                                    onClick={() => {
+                                                        if (window.confirm(`${protectionVerdict.liabilityNotice}\n\nApprove HIGH risk send?`)) {
+                                                            setWaHighRiskApproved(true);
+                                                        }
+                                                    }}
+                                                >
+                                                    Approve HIGH risk (my liability)
+                                                </button>
+                                            )}
+                                        </div>
+                                        {(protectionVerdict.tier === 'HIGH' || protectionVerdict.tier === 'CRITICAL') && (
+                                            <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 12, color: st.color }}>
+                                                {protectionVerdict.reductions.map((t) => (
+                                                    <li key={t}>{t}</li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+
+                            <div className="field-group">
+                                <label className="field-label">Audience (business list quality)</label>
+                                <select
+                                    className="field-input"
+                                    value={waAudienceQuality}
+                                    onChange={(e) => setWaAudienceQuality(e.target.value as AudienceQuality)}
+                                >
+                                    <option value="saved_contacts">Saved contacts / known customers</option>
+                                    <option value="opted_in">Opted-in leads (forms, purchases)</option>
+                                    <option value="mixed">Mixed list</option>
+                                    <option value="unknown">Not classified</option>
+                                </select>
+                                <p className="field-hint">Real business contacts unlock better throughput under protection.</p>
+                            </div>
 
                             {/* Delay preset (Task 8) */}
                             <div className="field-group">
                                 <label className="field-label">Delay Between Messages</label>
                                 <div className="flex gap-2 flex-wrap">
-                                    {(['fast', 'normal', 'safe', 'custom'] as const).map(p => (
+                                    {(['turbo', 'fast', 'normal', 'safe', 'custom'] as DelayPreset[]).map(p => (
                                         <button
                                             key={p}
+                                            type="button"
                                             onClick={() => setWaDelayPreset(p)}
                                             className={`px-3 py-1 text-sm rounded-md border transition-all ${waDelayPreset === p ? 'bg-green-50 border-green-400 text-green-700 font-medium' : 'border-gray-200 text-gray-500 hover:border-gray-400'}`}
+                                            title={p === 'turbo' ? 'Highest speed — elevated ban risk' : undefined}
                                         >
-                                            {p === 'fast' ? 'Fast (5s)' : p === 'normal' ? 'Normal (10s)' : p === 'safe' ? 'Safe (15s)' : 'Custom'}
+                                            {DELAY_PRESET_LABELS[p]}
                                         </button>
                                     ))}
                                 </div>
@@ -1226,14 +1507,28 @@ export default function EmailDashboard() {
                                         <Clock className="w-4 h-4 delay-icon" />
                                         <input
                                             type="number"
-                                            min={3}
-                                            max={60}
+                                            min={PACING_BOUNDS.delaySecMin}
+                                            max={PACING_BOUNDS.delaySecMax}
                                             value={waCustomDelay}
-                                            onChange={e => setWaCustomDelay(Math.min(60, Math.max(3, Number(e.target.value))))}
+                                            onChange={e =>
+                                                setWaCustomDelay(
+                                                    Math.min(
+                                                        PACING_BOUNDS.delaySecMax,
+                                                        Math.max(PACING_BOUNDS.delaySecMin, Number(e.target.value) || PACING_BOUNDS.delaySecMin),
+                                                    ),
+                                                )
+                                            }
                                             className="field-input delay-input"
                                         />
-                                        <span className="delay-suffix">seconds (3–60)</span>
+                                        <span className="delay-suffix">
+                                            seconds ({PACING_BOUNDS.delaySecMin}–{PACING_BOUNDS.delaySecMax})
+                                        </span>
                                     </div>
+                                )}
+                                {waDelayPreset === 'turbo' && (
+                                    <p className="field-warning" style={{ marginTop: 8 }}>
+                                        Turbo (2s) maximizes throughput. Spamming this fast may get your WhatsApp blocked.
+                                    </p>
                                 )}
                             </div>
 
@@ -1243,26 +1538,44 @@ export default function EmailDashboard() {
                                     <label className="field-label">Batch Size (messages before pause)</label>
                                     <input
                                         type="number"
-                                        min={5}
-                                        max={50}
+                                        min={PACING_BOUNDS.batchMin}
+                                        max={PACING_BOUNDS.batchMax}
                                         value={waBatchSize}
-                                        onChange={e => setWaBatchSize(Math.min(50, Math.max(5, Number(e.target.value))))}
+                                        onChange={e =>
+                                            setWaBatchSize(
+                                                Math.min(
+                                                    PACING_BOUNDS.batchMax,
+                                                    Math.max(PACING_BOUNDS.batchMin, Number(e.target.value) || PACING_BOUNDS.batchMin),
+                                                ),
+                                            )
+                                        }
                                         className="field-input"
                                     />
-                                    <p className="field-hint">Range 5–50. Default: 10.</p>
+                                    <p className="field-hint">
+                                        {PACING_BOUNDS.batchMin}–{PACING_BOUNDS.batchMax}. Default 10. Larger batches = faster, higher risk.
+                                    </p>
                                 </div>
                                 {/* Cool-down (Task 11) */}
                                 <div className="field-group">
                                     <label className="field-label">Cool-Down Duration (seconds)</label>
                                     <input
                                         type="number"
-                                        min={30}
-                                        max={300}
+                                        min={PACING_BOUNDS.cooldownSecMin}
+                                        max={PACING_BOUNDS.cooldownSecMax}
                                         value={waCoolDown}
-                                        onChange={e => setWaCoolDown(Math.min(300, Math.max(30, Number(e.target.value))))}
+                                        onChange={e =>
+                                            setWaCoolDown(
+                                                Math.min(
+                                                    PACING_BOUNDS.cooldownSecMax,
+                                                    Math.max(PACING_BOUNDS.cooldownSecMin, Number(e.target.value) || 0),
+                                                ),
+                                            )
+                                        }
                                         className="field-input"
                                     />
-                                    <p className="field-hint">Range 30–300. Default: 60.</p>
+                                    <p className="field-hint">
+                                        0 = no pause (faster, riskier). Default 60. Range {PACING_BOUNDS.cooldownSecMin}–{PACING_BOUNDS.cooldownSecMax}.
+                                    </p>
                                 </div>
                             </div>
 
@@ -1272,13 +1585,22 @@ export default function EmailDashboard() {
                                 <div className="delay-input-wrapper">
                                     <input
                                         type="number"
-                                        min={1}
+                                        min={PACING_BOUNDS.dailyLimitMin}
+                                        max={PACING_BOUNDS.dailyLimitMax}
                                         value={waDailyLimit}
-                                        onChange={e => setWaDailyLimit(Math.max(1, Number(e.target.value)))}
+                                        onChange={e =>
+                                            setWaDailyLimit(
+                                                Math.min(
+                                                    PACING_BOUNDS.dailyLimitMax,
+                                                    Math.max(PACING_BOUNDS.dailyLimitMin, Number(e.target.value) || 1),
+                                                ),
+                                            )
+                                        }
                                         className="field-input delay-input"
                                     />
                                     <span className="delay-suffix">messages · {waDailyCount} sent today</span>
                                 </div>
+                                <p className="field-hint">Soft cap to reduce ban risk. You can raise it or override at send time.</p>
                                 {waDailyCount >= waDailyWarningThreshold && waDailyCount < waDailyLimit && (
                                     <p className="field-warning">⚠️ Approaching daily limit ({waDailyCount}/{waDailyLimit})</p>
                                 )}
@@ -1293,7 +1615,7 @@ export default function EmailDashboard() {
                                         onChange={e => setWaJitter(e.target.checked)}
                                         className="checkbox-input"
                                     />
-                                    Random delay jitter (±30–50%)
+                                    Random delay jitter (±30–50%) — recommended
                                 </label>
                                 <label className="checkbox-label">
                                     <input
@@ -1302,9 +1624,14 @@ export default function EmailDashboard() {
                                         onChange={e => setWaSpinEnabled(e.target.checked)}
                                         className="checkbox-input"
                                     />
-                                    Message spin syntax <code>{'{Hi|Hello|Hey}'}</code>
+                                    Message spin syntax <code>{'{Hi|Hello|Hey}'}</code> — recommended
                                 </label>
                             </div>
+                            {(!waJitter || !waSpinEnabled) && (
+                                <p className="field-warning" style={{ marginTop: 8 }}>
+                                    Turning off jitter or spin makes messages more repetitive and easier to flag as automation.
+                                </p>
+                            )}
 
                             {/* Task 19 — Media attachment */}
                             <div className="field-group" style={{ marginTop: 8 }}>
@@ -1386,18 +1713,53 @@ export default function EmailDashboard() {
                                 </div>
                             )}
 
-                            {/* Daily limit warning / block (Task 12) */}
+                            {/* Protection gate + daily limit */}
                             {mode === 'whatsapp' && (
                                 <>
+                                    {(() => {
+                                        const st = TIER_STYLE[protectionVerdict.tier] ?? TIER_STYLE.MODERATE;
+                                        return (
+                                            <div
+                                                style={{
+                                                    textAlign: 'left',
+                                                    marginBottom: 12,
+                                                    background: st.bg,
+                                                    border: `1px solid ${st.border}`,
+                                                    borderRadius: 'var(--radius-sm)',
+                                                    padding: '10px 14px',
+                                                    fontSize: 13,
+                                                }}
+                                            >
+                                                <p style={{ fontWeight: 600, color: st.color, margin: 0 }}>
+                                                    {protectionVerdict.tier}: {protectionVerdict.title} · {protectionVerdict.action}
+                                                </p>
+                                                <p style={{ margin: '6px 0 0', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                                                    {protectionVerdict.message}
+                                                </p>
+                                                {protectionVerdict.blocked && (
+                                                    <p style={{ margin: '8px 0 0', color: st.color, fontSize: 12 }}>
+                                                        Send is blocked until you apply the enterprise plan or reduce volume/pace.
+                                                    </p>
+                                                )}
+                                                {protectionVerdict.canProceedWithApproval && !waHighRiskApproved && (
+                                                    <p style={{ margin: '8px 0 0', color: st.color, fontSize: 12 }}>
+                                                        HIGH: reduce settings or approve liability to send. Blocks are on you if WhatsApp restricts the number.
+                                                    </p>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
                                     {waDailyCount >= waDailyLimit && !waLimitOverridden ? (
                                         <div className="help-box" style={{ textAlign: 'left', marginBottom: 12 }}>
                                             <p className="help-title">🚫 Daily Limit Reached ({waDailyCount}/{waDailyLimit})</p>
-                                            <p style={{ fontSize: 13, marginTop: 4 }}>Sending is blocked. Override below to continue (ban risk!).</p>
+                                            <p style={{ fontSize: 13, marginTop: 4 }}>
+                                                Soft safety cap. Override to send more — higher volume increases ban risk.
+                                            </p>
                                             <button
                                                 className="btn-secondary"
                                                 style={{ marginTop: 8 }}
                                                 onClick={() => {
-                                                    if (window.confirm('⚠️ You have reached the daily limit. Sending more messages increases your ban risk. Are you sure you want to continue?')) {
+                                                    if (window.confirm('⚠️ Daily limit reached. Sending more messages increases ban risk if it looks like spam. Continue?')) {
                                                         setWaLimitOverridden(true);
                                                     }
                                                 }}
@@ -1458,21 +1820,60 @@ export default function EmailDashboard() {
                                     <div className="summary-item">
                                         <Clock className="w-4 h-4" />
                                         <span>
-                                            {waDelayPreset === 'custom' ? `${waCustomDelay}s` : `${WA_DELAY_PRESETS[waDelayPreset] / 1000}s`} delay
+                                            {getWABaseDelay() / 1000}s delay
                                             {waJitter ? ' + jitter' : ''}
-                                            {' · '}pause every {waBatchSize} msgs for {waCoolDown}s
+                                            {' · '}
+                                            {waCoolDown > 0
+                                                ? `pause every ${waBatchSize} msgs for ${waCoolDown}s`
+                                                : `no cool-down (batch ${waBatchSize})`}
+                                            {' · '}
+                                            gate: {protectionVerdict.tier}
                                         </span>
                                     </div>
                                 )}
                                 <div className="summary-item">
                                     <Clock className="w-4 h-4" />
-                                    <span>~{Math.ceil(data.length * (mode === 'email' ? sendDelay : getWABaseDelay() / 1000) / 60)} min total</span>
+                                    <span>
+                                        ~
+                                        {mode === 'email'
+                                            ? Math.ceil((data.length * sendDelay) / 60)
+                                            : Math.max(
+                                                  1,
+                                                  Math.ceil(
+                                                      (data.length * (getWABaseDelay() / 1000) +
+                                                          Math.floor(data.length / Math.max(1, waBatchSize)) * waCoolDown) /
+                                                          60,
+                                                  ),
+                                              )}{' '}
+                                        min total
+                                    </span>
                                 </div>
                             </div>
 
+                            {mode === 'whatsapp' && protectionVerdict.canProceedWithApproval && !waHighRiskApproved && (
+                                <button
+                                    type="button"
+                                    className="btn-secondary"
+                                    style={{ width: '100%', marginBottom: 8 }}
+                                    onClick={() => {
+                                        if (window.confirm(`${protectionVerdict.liabilityNotice}\n\nApprove HIGH risk and enable Send?`)) {
+                                            setWaHighRiskApproved(true);
+                                        }
+                                    }}
+                                >
+                                    Approve HIGH risk (I accept ban liability)
+                                </button>
+                            )}
+
                             <button
                                 onClick={mode === 'email' ? handleSendEmails : handleSendWhatsApp}
-                                disabled={mode === 'whatsapp' && !waLimitOverridden && waDailyCount >= waDailyLimit}
+                                disabled={
+                                    mode === 'whatsapp' &&
+                                    (
+                                        (!waLimitOverridden && waDailyCount >= waDailyLimit) ||
+                                        protectionVerdict.blocked
+                                    )
+                                }
                                 className="btn-send"
                             >
                                 {mode === 'email' ? <Send className="w-5 h-5" /> : <MessageCircle className="w-5 h-5" />}

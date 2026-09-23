@@ -1,12 +1,47 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { execSync } from 'child_process';
 import { Client, LocalAuth, MessageMedia, type Message } from 'whatsapp-web.js';
 
-export type WAStatus = 'disconnected' | 'reconnecting' | 'qr' | 'ready';
+export type WAStatus =
+  | 'disconnected'
+  | 'reconnecting'
+  | 'qr'
+  | 'verifying'
+  | 'ready'
+  | 'rejected';
 
 /** ACK level from whatsapp-web.js message_ack event */
 export type AckStatus = 0 | 1 | 2 | 3;
+
+/** Profile health after Business verification */
+export type WAProfileReport = {
+  isBusiness: boolean;
+  isEnterprise: boolean;
+  allowed: boolean;
+  rejectionReason: string | null;
+  phone?: string;
+  pushname?: string;
+  businessName?: string | null;
+  verifiedName?: string | null;
+  about?: string | null;
+  hasProfilePic: boolean;
+  profilePicUrl?: string | null;
+  completeness: {
+    score: number;
+    max: number;
+    missing: string[];
+    checks: {
+      businessAccount: boolean;
+      profilePicture: boolean;
+      about: boolean;
+      displayName: boolean;
+      businessName: boolean;
+    };
+  };
+  verifiedAt: string;
+};
 
 interface WAClientState {
   client: Client | null;
@@ -17,6 +52,9 @@ interface WAClientState {
   ackMap: Map<string, AckStatus>;
   /** Last initialization error message, if any */
   lastError: string | null;
+  profile: WAProfileReport | null;
+  /** Active LocalAuth clientId / device session id */
+  sessionId: string | null;
 }
 
 // Use globalThis to survive Next.js hot-reloads in development
@@ -33,6 +71,8 @@ function getState(): WAClientState {
       info: null,
       ackMap: new Map(),
       lastError: null,
+      profile: null,
+      sessionId: null,
     };
   }
   return globalThis.__waClientState;
@@ -48,6 +88,14 @@ export function getQR(): string | null {
 
 export function getClientInfo(): { pushname?: string; wid?: string } | null {
   return getState().info;
+}
+
+export function getProfileReport(): WAProfileReport | null {
+  return getState().profile;
+}
+
+export function getActiveSessionId(): string | null {
+  return getState().sessionId;
 }
 
 /** Returns the last initialization error message, or null if there was no error. */
@@ -71,13 +119,18 @@ export function getAllAcks(): Record<string, AckStatus> {
 // Use os.tmpdir() so this path is always writable — both in local dev and in
 // serverless/Lambda environments where the project root (/var/task) is read-only.
 const AUTH_PATH = path.join(os.tmpdir(), '.wwebjs_auth');
-// LocalAuth without a clientId stores the session at `{dataPath}/session`
-const SESSION_DIR = path.join(AUTH_PATH, 'session');
+
+function sessionDirFor(sessionId?: string | null): string {
+  // LocalAuth stores as session or session-{clientId}
+  if (sessionId) return path.join(AUTH_PATH, `session-${sessionId}`);
+  return path.join(AUTH_PATH, 'session');
+}
 
 /** Check whether a persisted LocalAuth session exists on disk. */
-export function isSessionSaved(): boolean {
+export function isSessionSaved(sessionId?: string | null): boolean {
   try {
-    return fs.existsSync(SESSION_DIR);
+    const id = sessionId ?? getState().sessionId;
+    return fs.existsSync(sessionDirFor(id));
   } catch {
     return false;
   }
@@ -87,10 +140,11 @@ export function isSessionSaved(): boolean {
  * Remove the persisted LocalAuth session from disk so the next
  * `initialize()` call will start a fresh QR-code flow.
  */
-export function clearSavedSession(): void {
+export function clearSavedSession(sessionId?: string | null): void {
   try {
-    if (fs.existsSync(AUTH_PATH)) {
-      fs.rmSync(AUTH_PATH, { recursive: true, force: true });
+    const dir = sessionDirFor(sessionId ?? getState().sessionId);
+    if (fs.existsSync(dir)) {
+      fs.rmSync(dir, { recursive: true, force: true });
     }
   } catch (err) {
     console.error('[WhatsApp] Failed to clear saved session:', err);
@@ -104,7 +158,13 @@ export function clearSavedSession(): void {
  * "The browser is already running for <path>".
  */
 function clearPuppeteerLocks(userDataDir: string): void {
-  const lockFiles = ['SingletonLock', 'SingletonSocket', 'SingletonCookie'];
+  const lockFiles = [
+    'SingletonLock',
+    'SingletonSocket',
+    'SingletonCookie',
+    'lockfile',
+    'DevToolsActivePort',
+  ];
   for (const name of lockFiles) {
     const filePath = path.join(userDataDir, name);
     try {
@@ -116,6 +176,50 @@ function clearPuppeteerLocks(userDataDir: string): void {
       console.warn(`[WhatsApp] Could not remove lock file ${filePath}:`, err);
     }
   }
+}
+
+/**
+ * Kill Chromium/Chrome processes still holding the WA session profile.
+ * Required on Windows after destroy()/hot-reload leaves a zombie browser.
+ */
+function killOrphanBrowsers(): void {
+  try {
+    if (process.platform === 'win32') {
+      const script = `
+$names = @('chrome.exe','chromium.exe','msedge.exe')
+Get-CimInstance Win32_Process | Where-Object {
+  $names -contains $_.Name -and $_.CommandLine -and (
+    $_.CommandLine -match '\\.wwebjs_auth' -or $_.CommandLine -match 'wwebjs_auth'
+  )
+} | ForEach-Object {
+  try { Stop-Process -Id $_.ProcessId -Force -ErrorAction Stop } catch {}
+}
+`;
+      const encoded = Buffer.from(script, 'utf16le').toString('base64');
+      execSync(`powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand ${encoded}`, {
+        stdio: 'ignore',
+        timeout: 20000,
+        windowsHide: true,
+      });
+    } else {
+      execSync('pkill -f ".wwebjs_auth" 2>/dev/null || true', {
+        stdio: 'ignore',
+        timeout: 10000,
+        shell: '/bin/bash',
+      });
+    }
+    console.log('[WhatsApp] Cleared orphan browser processes for session dir');
+  } catch (err) {
+    console.warn('[WhatsApp] Orphan browser cleanup skipped/failed:', err);
+  }
+}
+
+/** Full prep before launching Puppeteer: kill zombies + drop lock files. */
+function prepareBrowserLaunch(sessionId?: string | null): void {
+  killOrphanBrowsers();
+  clearPuppeteerLocks(sessionDirFor(sessionId));
+  // Also clear locks under AUTH_PATH root if present
+  clearPuppeteerLocks(AUTH_PATH);
 }
 
 /**
@@ -136,19 +240,29 @@ export function autoInit(): void {
   }
 }
 
-export async function initialize(): Promise<void> {
+export async function initialize(options?: { sessionId?: string }): Promise<void> {
   const state = getState();
+  const sessionId = options?.sessionId || state.sessionId || `session_${Date.now()}`;
 
-  if (state.client && state.status !== 'disconnected' && state.status !== 'reconnecting') {
-    // Already initialized — nothing to do
+  if (
+    state.client &&
+    state.sessionId === sessionId &&
+    state.status !== 'disconnected' &&
+    state.status !== 'reconnecting' &&
+    state.status !== 'rejected'
+  ) {
+    // Already initialized for this session
     return;
   }
 
   // Clear any previous error
   state.lastError = null;
+  state.sessionId = sessionId;
+  state.profile = null;
+  state.qrString = null;
 
   // If a saved session exists, show 'reconnecting' so the UI can give appropriate feedback
-  if (state.status === 'disconnected' && isSessionSaved()) {
+  if (state.status === 'disconnected' && isSessionSaved(sessionId)) {
     state.status = 'reconnecting';
   }
 
@@ -161,13 +275,21 @@ export async function initialize(): Promise<void> {
     console.warn('[WhatsApp] Could not pre-create auth directory:', err);
   }
 
-  // Clean up stale Puppeteer singleton lock files left over from a previous
-  // browser instance that was killed without a clean shutdown.  Without this,
-  // Puppeteer refuses to launch with "The browser is already running for <path>".
-  clearPuppeteerLocks(SESSION_DIR);
+  // If a previous client object exists (failed init / hot reload), tear it down first
+  if (state.client) {
+    try {
+      await state.client.destroy();
+    } catch {
+      /* ignore */
+    }
+    state.client = null;
+  }
+
+  // Kill zombie Chromium + remove SingletonLock so Puppeteer can launch again
+  prepareBrowserLaunch(sessionId);
 
   const client = new Client({
-    authStrategy: new LocalAuth({ dataPath: AUTH_PATH }),
+    authStrategy: new LocalAuth({ dataPath: AUTH_PATH, clientId: sessionId }),
     puppeteer: {
       headless: true,
       args: [
@@ -175,6 +297,7 @@ export async function initialize(): Promise<void> {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
+        '--disable-extensions',
       ],
     },
   });
@@ -195,7 +318,7 @@ export async function initialize(): Promise<void> {
   });
 
   client.on('ready', () => {
-    state.status = 'ready';
+    state.status = 'verifying';
     state.qrString = null;
     const info = client.info;
     if (info) {
@@ -204,7 +327,32 @@ export async function initialize(): Promise<void> {
         wid: info.wid?.user,
       };
     }
-    console.log('[WhatsApp] Client is ready');
+    console.log('[WhatsApp] Client ready — verifying Business account + profile…');
+    void verifyBusinessProfile(client).then(async (report) => {
+      state.profile = report;
+      if (!report.allowed) {
+        state.status = 'rejected';
+        state.lastError = report.rejectionReason;
+        console.warn('[WhatsApp] Rejected non-business / incomplete account:', report.rejectionReason);
+        try {
+          await client.logout();
+        } catch {
+          /* ignore */
+        }
+        try {
+          await client.destroy();
+        } catch {
+          /* ignore */
+        }
+        state.client = null;
+        prepareBrowserLaunch(sessionId);
+        clearSavedSession(sessionId);
+        return;
+      }
+      state.status = 'ready';
+      state.lastError = null;
+      console.log('[WhatsApp] Business account verified. Completeness', report.completeness.score);
+    });
   });
 
   client.on('auth_failure', (msg: string) => {
@@ -215,7 +363,7 @@ export async function initialize(): Promise<void> {
     state.qrString = null;
     state.client = null;
     // Clear saved session so next connect starts a fresh QR flow
-    clearSavedSession();
+    clearSavedSession(sessionId);
   });
 
   client.on('disconnected', (reason: string) => {
@@ -236,9 +384,100 @@ export async function initialize(): Promise<void> {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     console.error('[WhatsApp] client.initialize() failed:', message);
+
+    // Common after crash/hot-reload: retry once after forcing browser cleanup
+    if (/already running|userDataDir|SingletonLock/i.test(message)) {
+      console.warn('[WhatsApp] Browser lock conflict — force cleanup and retry once');
+      try {
+        await client.destroy();
+      } catch {
+        /* ignore */
+      }
+      state.client = null;
+      prepareBrowserLaunch(sessionId);
+      await new Promise((r) => setTimeout(r, 1500));
+
+      const retry = new Client({
+        authStrategy: new LocalAuth({ dataPath: AUTH_PATH, clientId: sessionId }),
+        puppeteer: {
+          headless: true,
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--disable-extensions',
+          ],
+        },
+      });
+      // Re-bind the same handlers used above
+      retry.on('qr', (qr: string) => {
+        state.qrString = qr;
+        state.status = 'qr';
+      });
+      retry.on('authenticated', () => {
+        state.qrString = null;
+      });
+      retry.on('ready', () => {
+        state.status = 'verifying';
+        state.qrString = null;
+        const info = retry.info;
+        if (info) {
+          state.info = { pushname: info.pushname, wid: info.wid?.user };
+        }
+        void verifyBusinessProfile(retry).then(async (report) => {
+          state.profile = report;
+          if (!report.allowed) {
+            state.status = 'rejected';
+            state.lastError = report.rejectionReason;
+            try {
+              await retry.destroy();
+            } catch {
+              /* ignore */
+            }
+            state.client = null;
+            prepareBrowserLaunch(sessionId);
+            clearSavedSession(sessionId);
+            return;
+          }
+          state.status = 'ready';
+        });
+      });
+      retry.on('auth_failure', (msg: string) => {
+        state.status = 'disconnected';
+        state.lastError = msg;
+        state.qrString = null;
+        state.client = null;
+        clearSavedSession(sessionId);
+      });
+      retry.on('disconnected', () => {
+        state.status = 'disconnected';
+        state.qrString = null;
+        state.client = null;
+        state.info = null;
+      });
+      retry.on('message_ack', (msg: Message, ack: number) => {
+        state.ackMap.set(msg.id.id, ack as AckStatus);
+      });
+
+      try {
+        state.client = retry;
+        await retry.initialize();
+        return;
+      } catch (retryErr: unknown) {
+        const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
+        state.status = 'disconnected';
+        state.lastError = retryMsg;
+        state.client = null;
+        prepareBrowserLaunch(sessionId);
+        throw retryErr;
+      }
+    }
+
     state.status = 'disconnected';
     state.lastError = message;
     state.client = null;
+    prepareBrowserLaunch(sessionId);
     throw err;
   }
 }
@@ -337,19 +576,146 @@ export async function isRegisteredUser(phone: string): Promise<boolean> {
   return state.client.isRegisteredUser(chatId);
 }
 
-export async function disconnect(): Promise<void> {
-  const state = getState();
+/**
+ * Inspect the linked account: must be WhatsApp Business (or Enterprise).
+ * Collects profile picture, about, business/display name for completeness.
+ * Personal (normal) accounts are rejected — session is not kept.
+ */
+export async function verifyBusinessProfile(client: Client): Promise<WAProfileReport> {
+  const wid = client.info?.wid?._serialized || (client.info?.wid?.user ? `${client.info.wid.user}@c.us` : null);
+  const pushname = client.info?.pushname || undefined;
+  const phone = client.info?.wid?.user;
 
-  if (!state.client) {
-    return;
-  }
+  let isBusiness = false;
+  let isEnterprise = false;
+  let about: string | null = null;
+  let profilePicUrl: string | null = null;
+  let businessName: string | null = null;
+  let verifiedName: string | null = null;
 
   try {
-    await state.client.destroy();
+    if (wid) {
+      const contact = await client.getContactById(wid);
+      isBusiness = Boolean(contact.isBusiness || contact.isEnterprise);
+      isEnterprise = Boolean(contact.isEnterprise);
+      verifiedName = (contact as { verifiedName?: string }).verifiedName ?? null;
+      businessName = verifiedName || contact.name || null;
+
+      try {
+        about = await contact.getAbout();
+      } catch {
+        about = null;
+      }
+      try {
+        profilePicUrl = (await contact.getProfilePicUrl()) || null;
+      } catch {
+        profilePicUrl = null;
+      }
+
+      // BusinessContact may expose businessProfile
+      const bp = (contact as { businessProfile?: { description?: string; email?: string } }).businessProfile;
+      if (bp?.description && !about) about = bp.description;
+    }
+  } catch (err) {
+    console.warn('[WhatsApp] Profile fetch partial failure:', err);
+  }
+
+  // Fallback: some builds expose isBusiness only via store after delay
+  if (!isBusiness && wid) {
+    try {
+      const contact2 = await client.getContactById(wid);
+      isBusiness = Boolean(contact2.isBusiness || contact2.isEnterprise);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const hasProfilePic = Boolean(profilePicUrl);
+  const hasAbout = Boolean(about && about.trim().length > 0);
+  const hasDisplayName = Boolean(pushname && pushname.trim().length > 0);
+  const hasBusinessName = Boolean(businessName && businessName.trim().length > 0);
+
+  const checks = {
+    businessAccount: isBusiness || isEnterprise,
+    profilePicture: hasProfilePic,
+    about: hasAbout,
+    displayName: hasDisplayName,
+    businessName: hasBusinessName,
+  };
+
+  const missing: string[] = [];
+  if (!checks.businessAccount) missing.push('WhatsApp Business account (personal WhatsApp not allowed)');
+  if (!checks.profilePicture) missing.push('Profile picture');
+  if (!checks.about) missing.push('About / business description');
+  if (!checks.displayName) missing.push('Display name (push name)');
+  if (!checks.businessName) missing.push('Business name');
+
+  // Completeness: business required; other fields are health score (4 optional + 1 required)
+  const optionalDone = [hasProfilePic, hasAbout, hasDisplayName, hasBusinessName].filter(Boolean).length;
+  const score = (checks.businessAccount ? 1 : 0) + optionalDone;
+  const max = 5;
+
+  let allowed = checks.businessAccount;
+  let rejectionReason: string | null = null;
+  if (!allowed) {
+    rejectionReason =
+      'This number is a normal (personal) WhatsApp account. WhatsFlow only accepts WhatsApp Business accounts. Please upgrade to WhatsApp Business and try again.';
+  }
+
+  return {
+    isBusiness: isBusiness || isEnterprise,
+    isEnterprise,
+    allowed,
+    rejectionReason,
+    phone,
+    pushname,
+    businessName,
+    verifiedName,
+    about,
+    hasProfilePic,
+    profilePicUrl,
+    completeness: { score, max, missing, checks },
+    verifiedAt: new Date().toISOString(),
+  };
+}
+
+export async function disconnect(options?: { clearSession?: boolean; sessionId?: string }): Promise<void> {
+  const state = getState();
+  const clearSession = options?.clearSession !== false; // default: full logout
+  const sessionId = options?.sessionId ?? state.sessionId;
+
+  try {
+    if (state.client) {
+      try {
+        // Prefer logout when session should be wiped (forces re-QR next time)
+        if (clearSession && (state.status === 'ready' || state.status === 'verifying')) {
+          try {
+            await state.client.logout();
+          } catch {
+            /* destroy still runs below */
+          }
+        }
+        await state.client.destroy();
+      } catch (err) {
+        console.warn('[WhatsApp] destroy() error (continuing cleanup):', err);
+      }
+    }
   } finally {
     state.client = null;
     state.status = 'disconnected';
     state.qrString = null;
     state.info = null;
+    state.lastError = null;
+    state.profile = null;
+    state.ackMap.clear();
+
+    // Always free the profile so the next Connect works
+    prepareBrowserLaunch(sessionId);
+
+    if (clearSession) {
+      clearSavedSession(sessionId);
+      // Locks may reappear under a half-deleted tree; clear again
+      prepareBrowserLaunch(sessionId);
+    }
   }
 }

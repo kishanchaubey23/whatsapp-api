@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 
 export const runtime = 'edge';
-export const alt = 'SendStack — Bulk Email & WhatsApp Messaging Platform';
+export const alt = 'Loopx — Bulk Email & WhatsApp Messaging Platform';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -10,7 +10,7 @@ export default function OGImage() {
     (
       <div
         style={{
-          background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%)',
+          background: 'linear-gradient(135deg, #0a0a0a 0%, #0f281e 50%, #061e14 100%)',
           width: '100%',
           height: '100%',
           display: 'flex',
@@ -34,7 +34,7 @@ export default function OGImage() {
               width: '64px',
               height: '64px',
               borderRadius: '16px',
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              background: '#25D366',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -43,7 +43,7 @@ export default function OGImage() {
               fontWeight: 'bold',
             }}
           >
-            S
+            L
           </div>
           <span
             style={{
@@ -53,14 +53,14 @@ export default function OGImage() {
               letterSpacing: '-1px',
             }}
           >
-            SendStack
+            Loopx
           </span>
         </div>
 
         <div
           style={{
             fontSize: '28px',
-            color: '#a5b4fc',
+            color: '#86efac',
             textAlign: 'center',
             maxWidth: '800px',
             lineHeight: 1.4,
@@ -81,7 +81,7 @@ export default function OGImage() {
           }}
         >
           Upload a CSV, personalize with template variables, and send at scale.
-          Free, open-source, fully offline.
+          Secure, fast, and reliable.
         </div>
 
         <div
@@ -95,11 +95,11 @@ export default function OGImage() {
               <div
                 key={tag}
                 style={{
-                  background: 'rgba(99, 102, 241, 0.15)',
-                  border: '1px solid rgba(99, 102, 241, 0.3)',
+                  background: 'rgba(37, 211, 102, 0.15)',
+                  border: '1px solid rgba(37, 211, 102, 0.3)',
                   borderRadius: '20px',
                   padding: '8px 20px',
-                  color: '#a5b4fc',
+                  color: '#86efac',
                   fontSize: '14px',
                   fontWeight: 500,
                 }}
@@ -116,10 +116,10 @@ export default function OGImage() {
             bottom: '30px',
             right: '40px',
             fontSize: '14px',
-            color: '#64748b',
+            color: '#22c55e',
           }}
         >
-          by Qobouli AI & Dev
+          powered by Loopanda
         </div>
       </div>
     ),
