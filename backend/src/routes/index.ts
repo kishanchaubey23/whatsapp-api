@@ -14,7 +14,7 @@ const router = Router();
 router.get('/health', (_req, res) => {
   res.json({
     success: true,
-    service: 'sendstack-backend',
+    service: 'loopx-backend',
     plan: 'enterprise',
     priceInr: 5000,
     queue: 'bullmq',

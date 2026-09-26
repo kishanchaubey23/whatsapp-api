@@ -6,8 +6,20 @@
   <component name="ChangeListManager">
     <list default="true" id="53ec436a-82ec-4297-8446-1bbec4a1854b" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/config.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/social-preview.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/prisma/schema.prisma" beforeDir="false" afterPath="$PROJECT_DIR$/backend/prisma/schema.prisma" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/lib/prisma.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/lib/prisma.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/lib/protection-engine.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/lib/protection-engine.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/routes/admin.routes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/routes/admin.routes.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/routes/auth.routes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/routes/auth.routes.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/routes/blast.routes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/routes/blast.routes.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/routes/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/routes/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/services/usage.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/services/usage.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/admin/users/[id]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/admin/users/[id]/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/admin/users/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/admin/users/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/layout.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/DashboardHome.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/DashboardHome.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/DashboardShell.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/DashboardShell.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

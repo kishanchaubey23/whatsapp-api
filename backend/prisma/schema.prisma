@@ -9,6 +9,7 @@ datasource db {
 
 /// One plan only — enterprise for everyone
 enum PlanCode {
+  free
   enterprise
 }
 
@@ -49,10 +50,10 @@ model User {
   phone        String?  @unique @db.VarChar(20)
   passwordHash String   @map("password_hash") @db.VarChar(255)
   isActive     Boolean  @default(true) @map("is_active")
-  /// Single plan — always enterprise
-  planCode     PlanCode @default(enterprise) @map("plan_code")
-  planActive   Boolean  @default(true) @map("plan_active")
-  planPriceInr Int      @default(5000) @map("plan_price_inr")
+  /// Default free plan until approved by Admin
+  planCode     PlanCode @default(free) @map("plan_code")
+  planActive   Boolean  @default(false) @map("plan_active")
+  planPriceInr Int      @default(0) @map("plan_price_inr")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 

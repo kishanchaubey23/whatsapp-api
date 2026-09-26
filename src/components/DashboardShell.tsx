@@ -235,7 +235,13 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                 <path d="M10 19a2 2 0 0 0 4 0" strokeLinecap="round" />
               </svg>
             </button>
-            <span className="wf-plan-chip">₹5,000 · Enterprise</span>
+            {user?.plan?.active && user?.plan?.code === 'enterprise' ? (
+              <span className="wf-plan-chip">₹5,000 · Enterprise</span>
+            ) : (
+              <span className="wf-plan-chip warn" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', fontWeight: 600 }}>
+                Free Plan (Pending Approval)
+              </span>
+            )}
           </div>
         </header>
 

@@ -35,12 +35,12 @@ function UsersBody() {
   async function togglePlan(u: AdminUserRow) {
     const next = !u.planActive;
     const msg = next
-      ? `Activate plan for ${u.email}?`
-      : `Deactivate plan for ${u.email}? They will not be able to use paid features.`;
+      ? `Approve user & activate Enterprise Plan for ${u.email}?`
+      : `Deactivate Enterprise Plan for ${u.email}? User will revert to Free Plan.`;
     if (!window.confirm(msg)) return;
     setBusyId(u.id);
     try {
-      await adminApi.deactivatePlan(u.id, next, !next);
+      await adminApi.deactivatePlan(u.id, next, false);
       await load(q);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Update failed');
@@ -107,8 +107,8 @@ function UsersBody() {
                       {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : '—'}
                     </td>
                     <td>
-                      <span className={`adm-badge ${u.planActive ? 'on' : 'off'}`}>
-                        {u.planActive ? 'Active' : 'Off'} · ₹{u.planPriceInr}
+                      <span className={`adm-badge ${u.planActive && u.planCode === 'enterprise' ? 'on' : 'off'}`}>
+                        {u.planActive && u.planCode === 'enterprise' ? 'Enterprise' : 'Free (Pending)'}
                       </span>
                     </td>
                     <td>
@@ -130,7 +130,7 @@ function UsersBody() {
                         disabled={busyId === u.id}
                         onClick={() => void togglePlan(u)}
                       >
-                        {u.planActive ? 'Deactivate plan' : 'Activate plan'}
+                        {u.planActive ? 'Deactivate to Free' : 'Approve & Activate'}
                       </button>
                       <Link href={`/admin/users/${u.id}`} className="adm-btn primary" style={{ display: 'inline-block' }}>
                         Action

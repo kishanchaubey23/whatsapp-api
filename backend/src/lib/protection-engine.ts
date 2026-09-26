@@ -65,7 +65,7 @@ export const ENTERPRISE_DEFAULTS = {
 };
 
 const LIABILITY =
-  'By continuing you accept that aggressive pacing may cause WhatsApp to restrict or ban this number. SendStack is not responsible for account blocks when you override protection.';
+  'By continuing you accept that aggressive pacing may cause WhatsApp to restrict or ban this number. Loopx is not responsible for account blocks when you override protection.';
 
 function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));

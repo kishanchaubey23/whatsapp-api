@@ -35,9 +35,9 @@ router.post('/register', async (req, res) => {
       email,
       phone,
       passwordHash,
-      planCode: 'enterprise',
-      planActive: true,
-      planPriceInr: config.plan.priceInr,
+      planCode: 'free',
+      planActive: false,
+      planPriceInr: 0,
     },
   });
 
@@ -49,7 +49,7 @@ router.post('/register', async (req, res) => {
       id: user.id,
       name: user.name,
       email: user.email,
-      plan: { code: user.planCode, priceInr: user.planPriceInr },
+      plan: { code: user.planCode, priceInr: user.planPriceInr, active: user.planActive },
     },
   });
 });
@@ -64,9 +64,6 @@ router.post('/login', async (req, res) => {
     return res.status(401).json({ success: false, error: 'Invalid email or password' });
   }
   if (!user.isActive) return res.status(403).json({ success: false, error: 'Account disabled' });
-  if (!user.planActive) {
-    return res.status(403).json({ success: false, error: 'Plan deactivated. Contact support.' });
-  }
 
   await prisma.user.update({
     where: { id: user.id },

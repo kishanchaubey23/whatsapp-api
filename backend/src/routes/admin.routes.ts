@@ -284,23 +284,26 @@ router.post('/users/:id/deactivate-plan', async (req, res) => {
   const existing = await prisma.user.findUnique({ where: { id: req.params.id } });
   if (!existing) return res.status(404).json({ success: false, error: 'User not found' });
 
+  const isActivating = parsed.data.planActive;
+
   const user = await prisma.user.update({
     where: { id: req.params.id },
     data: {
-      planActive: parsed.data.planActive,
-      ...(parsed.data.deactivateAccount !== undefined
-        ? { isActive: parsed.data.planActive ? true : !parsed.data.deactivateAccount ? existing.isActive : false }
-        : {}),
-      // If turning plan off and deactivateAccount true → isActive false
-      ...(parsed.data.planActive === false && parsed.data.deactivateAccount
-        ? { isActive: false }
-        : {}),
-      ...(parsed.data.planActive === true ? { isActive: true } : {}),
+      planActive: isActivating,
+      planCode: isActivating ? 'enterprise' : 'free',
+      planPriceInr: isActivating ? config.plan.priceInr : 0,
+      isActive: isActivating
+        ? true
+        : parsed.data.deactivateAccount
+          ? false
+          : existing.isActive,
     },
     select: {
       id: true,
       email: true,
+      planCode: true,
       planActive: true,
+      planPriceInr: true,
       isActive: true,
     },
   });

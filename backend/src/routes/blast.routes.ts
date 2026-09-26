@@ -150,6 +150,14 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ success: false, error: parsed.error.flatten() });
   }
 
+  const user = await prisma.user.findUnique({ where: { id: req.auth!.userId } });
+  if (!user || !user.planActive || user.planCode !== 'enterprise') {
+    return res.status(403).json({
+      success: false,
+      error: 'Admin approval required. Your account is on the Free Plan. Please contact admin to activate sending privileges.',
+    });
+  }
+
   const d = parsed.data;
   const primaryAccountId = d.whatsappAccountId;
 

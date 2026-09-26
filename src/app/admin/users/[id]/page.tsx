@@ -35,16 +35,16 @@ function UserDetailBody({ id }: { id: string }) {
     if (
       !window.confirm(
         planActive
-          ? 'Activate this user plan?'
-          : 'Deactivate plan and lock account login?',
+          ? `Approve user & activate Enterprise Plan for ${user.email}?`
+          : `Deactivate Enterprise Plan for ${user.email}? User will revert to Free Plan.`,
       )
     ) {
       return;
     }
     setBusy(true);
     try {
-      await adminApi.deactivatePlan(user.id, planActive, !planActive);
-      setToast(planActive ? 'Plan activated' : 'Plan deactivated');
+      await adminApi.deactivatePlan(user.id, planActive, false);
+      setToast(planActive ? 'Approved & Enterprise Plan activated' : 'Plan deactivated (reverted to Free)');
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Update failed');
@@ -115,7 +115,7 @@ function UserDetailBody({ id }: { id: string }) {
         <div>
           <span>Plan</span>
           <strong>
-            {user.planCode} · ₹{user.planPriceInr} · {user.planActive ? 'ON' : 'OFF'}
+            {user.planActive && user.planCode === 'enterprise' ? 'Enterprise (Approved)' : 'Free (Awaiting Approval)'}
           </strong>
         </div>
         <div>
@@ -143,7 +143,7 @@ function UserDetailBody({ id }: { id: string }) {
           disabled={busy}
           onClick={() => void deactivate(!user.planActive)}
         >
-          {user.planActive ? 'Deactivate plan' : 'Activate plan'}
+          {user.planActive ? 'Deactivate to Free' : 'Approve & Activate Enterprise'}
         </button>
         <button type="button" className="adm-btn ghost" disabled={busy} onClick={() => void addPayment()}>
           + Record payment (₹{user.planPriceInr || 5000})

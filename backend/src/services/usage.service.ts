@@ -45,6 +45,15 @@ export async function getUsageSummary(userId: string) {
 }
 
 export async function assertWithinQuota(userId: string, additional: number) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user || !user.planActive || user.planCode !== 'enterprise') {
+    return {
+      ok: false as const,
+      error: 'Admin approval required. Your account is on the Free Plan. Please contact admin to activate sending privileges.',
+      summary: await getUsageSummary(userId),
+    };
+  }
+
   const summary = await getUsageSummary(userId);
   if (additional > summary.today.remainingDaily) {
     return {

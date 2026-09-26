@@ -132,6 +132,32 @@ export default function DashboardHome() {
         </div>
       </section>
 
+      {(!user?.plan?.active || user?.plan?.code !== 'enterprise') && (
+        <section
+          style={{
+            background: '#fffbe3',
+            border: '1px solid #fde68a',
+            color: '#92400e',
+            padding: '16px 20px',
+            borderRadius: '12px',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+          }}
+        >
+          <div>
+            <strong style={{ fontSize: '15px', display: 'block', marginBottom: '4px' }}>
+              Free Plan (Awaiting Admin Approval)
+            </strong>
+            <span style={{ fontSize: '13px', color: '#b45309' }}>
+              Your account is registered on the Free Plan. Bulk sending privileges will be unlocked once an Admin approves your account in the Admin Panel.
+            </span>
+          </div>
+        </section>
+      )}
+
       <section className="wf-stats">
         {STATS.map((s) => (
           <article key={s.label} className="wf-stat-card">
