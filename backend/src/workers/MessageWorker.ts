@@ -206,7 +206,14 @@ export class MessageWorker {
     this.worker.on('failed', (job, err) => {
       console.error(`[MessageWorker] failed job=${job?.id}`, err.message);
     });
-    this.worker.on('error', (err) => console.error('[MessageWorker] worker error', err));
+    this.worker.on('error', (err) => {
+      console.error('[MessageWorker] worker error:', {
+        name: err.name,
+        message: err.message,
+        stack: err.stack,
+        code: (err as NodeJS.ErrnoException).code,
+      });
+    });
 
     console.log(
       `[MessageWorker] queue=${config.queueName} concurrency=${config.workerConcurrency} registry=on`,

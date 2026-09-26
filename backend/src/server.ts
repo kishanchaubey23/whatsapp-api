@@ -49,7 +49,7 @@ async function main() {
   }
 
   httpServer.listen(config.port, () => {
-    console.log(`SendStack API :${config.port}`);
+    console.log(`Loopx API :${config.port}`);
     console.log(`Plan: enterprise ₹${config.plan.priceInr}`);
     console.log(`REST  http://localhost:${config.port}/api/health`);
     console.log(`WS    ws://localhost:${config.port}`);

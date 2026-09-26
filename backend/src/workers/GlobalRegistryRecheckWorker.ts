@@ -63,6 +63,14 @@ export class GlobalRegistryRecheckWorker {
       incRegistryMetric('registry_recheck_failure');
       logRegistryEvent('recheck_job_failed', { id: job?.id, err: err.message });
     });
+    this.worker.on('error', (err) => {
+      console.error('[RegistryRecheckWorker] worker error:', {
+        name: err.name,
+        message: err.message,
+        stack: err.stack,
+        code: (err as NodeJS.ErrnoException).code,
+      });
+    });
 
     console.log(
       `[RegistryRecheckWorker] queue=${config.registryRecheck.queueName} concurrency=${config.registryRecheck.concurrency} quota=redis-utc`,

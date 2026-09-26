@@ -10,18 +10,39 @@ function env(key: string, fallback?: string): string {
   return v;
 }
 
-function parseRedisUrl(url: string): { host: string; port: number; password?: string; maxRetriesPerRequest: null } {
+function parseRedisUrl(url: string): {
+  host: string;
+  port: number;
+  username?: string;
+  password?: string;
+  tls?: Record<string, never>;
+  maxRetriesPerRequest: null;
+} {
   try {
     const u = new URL(url);
+
     return {
       host: u.hostname || '127.0.0.1',
       port: Number(u.port || 6379),
-      password: u.password ? decodeURIComponent(u.password) : undefined,
+      username: u.username
+        ? decodeURIComponent(u.username)
+        : undefined,
+      password: u.password
+        ? decodeURIComponent(u.password)
+        : undefined,
+
+      // Upstash uses rediss:// (TLS)
+      ...(u.protocol === 'rediss:' ? { tls: {} } : {}),
+
       // Required by BullMQ workers
       maxRetriesPerRequest: null,
     };
   } catch {
-    return { host: '127.0.0.1', port: 6379, maxRetriesPerRequest: null };
+    return {
+      host: '127.0.0.1',
+      port: 6379,
+      maxRetriesPerRequest: null,
+    };
   }
 }
 
