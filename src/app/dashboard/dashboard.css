@@ -1681,6 +1681,29 @@
   font-size: 15px;
 }
 
+.wf-wa-pairing-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  text-align: center;
+  padding: 10px 0;
+}
+
+.wf-pairing-code {
+  background: #f0fdf4;
+  border: 2px dashed #16a34a;
+  border-radius: 12px;
+  padding: 16px 24px;
+  font-family: monospace;
+  font-size: 28px;
+  font-weight: bold;
+  letter-spacing: 4px;
+  color: #166534;
+  margin: 8px 0;
+}
+
 /* ===== Templates builder ===== */
 .wf-tpl { display: flex; flex-direction: column; gap: 18px; }
 .wf-tpl-list { display: flex; flex-direction: column; gap: 12px; }

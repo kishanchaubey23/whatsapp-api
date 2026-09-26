@@ -96,10 +96,58 @@ export default function DevicesPanel() {
   const [country, setCountry] = useState(COUNTRIES[0]);
   const [phoneLocal, setPhoneLocal] = useState('');
   const [showCountry, setShowCountry] = useState(false);
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [pairingLoading, setPairingLoading] = useState(false);
   /** Session IDs that already showed the success modal (don't reopen on poll) */
   const successShownRef = useRef<Set<string>>(new Set());
   /** Only open success when we were actively connecting this session */
   const awaitingConnectRef = useRef<string | null>(null);
+
+  const handleRequestPairingCode = async (device: Device) => {
+    if (!phoneLocal.trim()) {
+      setError('Enter a valid phone number');
+      return;
+    }
+    setPairingLoading(true);
+    setError(null);
+    try {
+      const fullPhone = `${country.dial}${phoneLocal.replace(/\D/g, '')}`;
+      const res = await fetch('/api/whatsapp/pairing-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: fullPhone, sessionId: device.sessionId }),
+      });
+      const json = (await res.json()) as { success?: boolean; pairingCode?: string; error?: string };
+      if (!res.ok || !json.success || !json.pairingCode) {
+        throw new Error(json.error || 'Failed to generate pairing code');
+      }
+      setPairingCode(json.pairingCode);
+      awaitingConnectRef.current = device.sessionId;
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to generate pairing code');
+    } finally {
+      setPairingLoading(false);
+    }
+  };
+
+  const handleClearCache = async () => {
+    if (!window.confirm('Are you sure you want to clear all WhatsApp caches and sessions? This will reset all active connections.')) {
+      return;
+    }
+    try {
+      const res = await fetch('/api/whatsapp/clear-cache', { method: 'POST' });
+      if (res.ok) {
+        setLiveStatus('disconnected');
+        setQr(null);
+        setPairingCode(null);
+        window.alert('WhatsApp cache and sessions cleared successfully.');
+      } else {
+        window.alert('Failed to clear cache.');
+      }
+    } catch {
+      window.alert('Failed to clear cache.');
+    }
+  };
 
   useEffect(() => {
     setDevices(loadDevices());
@@ -287,6 +335,7 @@ export default function DevicesPanel() {
   }
 
   async function showPhone(device: Device) {
+    setPairingCode(null);
     setModal({ type: 'device', deviceId: device.id, mode: 'phone' });
     await startSession(device);
   }
@@ -342,12 +391,17 @@ export default function DevicesPanel() {
           <h1>WhatsApp Devices</h1>
           <p>Link and manage WhatsApp Business sessions. Personal accounts are blocked.</p>
         </div>
-        <button type="button" className="wf-add-device-btn" onClick={openAddName}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-            <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-          </svg>
-          Add Device
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button type="button" className="wf-btn ghost" onClick={() => void handleClearCache()} title="Clear session cache & lock files">
+            🗑 Clear Cache
+          </button>
+          <button type="button" className="wf-add-device-btn" onClick={openAddName}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+            </svg>
+            Add Device
+          </button>
+        </div>
       </div>
 
       {/* Empty state */}
@@ -573,53 +627,71 @@ export default function DevicesPanel() {
               <div className="wf-wa-phone-layout compact">
                 <h2>Enter phone number</h2>
                 <p className="wf-wa-sub">Select a country and enter your WhatsApp Business number.</p>
-                <div className="wf-wa-phone-fields">
-                  <div className="wf-wa-select-wrap">
-                    <button type="button" className="wf-wa-select" onClick={() => setShowCountry((v) => !v)}>
-                      <span>{country.flag} {country.name}</span>
-                      <span>▾</span>
+                {pairingCode ? (
+                  <div className="wf-wa-pairing-box">
+                    <h3>Your Pairing Code</h3>
+                    <div className="wf-pairing-code">{pairingCode}</div>
+                    <ol className="wf-wa-steps compact">
+                      <li><span>1</span> Open WhatsApp Business on your phone</li>
+                      <li><span>2</span> Tap Linked devices → Link a device → Link with phone number instead</li>
+                      <li><span>3</span> Enter the 8-character code above</li>
+                    </ol>
+                    <button
+                      type="button"
+                      className="wf-wa-switch-link center"
+                      onClick={() => setPairingCode(null)}
+                    >
+                      ← Enter different phone number
                     </button>
-                    {showCountry && (
-                      <ul className="wf-wa-select-menu">
-                        {COUNTRIES.map((c) => (
-                          <li key={c.code}>
-                            <button type="button" onClick={() => { setCountry(c); setShowCountry(false); }}>
-                              {c.flag} {c.name} ({c.dial})
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
                   </div>
-                  <div className="wf-wa-phone-input">
-                    <span>{country.dial}</span>
-                    <input
-                      type="tel"
-                      value={phoneLocal}
-                      placeholder="Phone number"
-                      onChange={(e) => setPhoneLocal(e.target.value.replace(/[^\d\s-]/g, ''))}
-                    />
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="wf-wa-next"
-                  onClick={() => {
-                    window.alert(
-                      'Pairing-code login is coming next. Please use Show QR Code with WhatsApp Business for now.',
-                    );
-                    void showQr(activeDevice);
-                  }}
-                >
-                  Next
-                </button>
-                <button
-                  type="button"
-                  className="wf-wa-switch-link center"
-                  onClick={() => void showQr(activeDevice)}
-                >
-                  Log in with QR code ›
-                </button>
+                ) : (
+                  <>
+                    <div className="wf-wa-phone-fields">
+                      <div className="wf-wa-select-wrap">
+                        <button type="button" className="wf-wa-select" onClick={() => setShowCountry((v) => !v)}>
+                          <span>{country.flag} {country.name}</span>
+                          <span>▾</span>
+                        </button>
+                        {showCountry && (
+                          <ul className="wf-wa-select-menu">
+                            {COUNTRIES.map((c) => (
+                              <li key={c.code}>
+                                <button type="button" onClick={() => { setCountry(c); setShowCountry(false); }}>
+                                  {c.flag} {c.name} ({c.dial})
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                      <div className="wf-wa-phone-input">
+                        <span>{country.dial}</span>
+                        <input
+                          type="tel"
+                          value={phoneLocal}
+                          placeholder="Phone number"
+                          onChange={(e) => setPhoneLocal(e.target.value.replace(/[^\d\s-]/g, ''))}
+                        />
+                      </div>
+                    </div>
+                    {error && <div className="wf-wa-error">{error}</div>}
+                    <button
+                      type="button"
+                      className="wf-wa-next"
+                      disabled={pairingLoading}
+                      onClick={() => void handleRequestPairingCode(activeDevice)}
+                    >
+                      {pairingLoading ? 'Requesting Code…' : 'Next'}
+                    </button>
+                    <button
+                      type="button"
+                      className="wf-wa-switch-link center"
+                      onClick={() => void showQr(activeDevice)}
+                    >
+                      Log in with QR code ›
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>

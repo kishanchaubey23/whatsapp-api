@@ -6,8 +6,10 @@
   <component name="ChangeListManager">
     <list default="true" id="53ec436a-82ec-4297-8446-1bbec4a1854b" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/layout.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/opengraph-image.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/dashboard/dashboard.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/dashboard/dashboard.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/DevicesPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/DevicesPanel.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lib/whatsapp-client.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib/whatsapp-client.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tsconfig.json" beforeDir="false" afterPath="$PROJECT_DIR$/tsconfig.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

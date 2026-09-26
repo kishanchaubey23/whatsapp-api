@@ -47,6 +47,7 @@ interface WAClientState {
   client: Client | null;
   status: WAStatus;
   qrString: string | null;
+  pairingCode: string | null;
   info: { pushname?: string; wid?: string } | null;
   /** messageId → latest ACK level */
   ackMap: Map<string, AckStatus>;
@@ -68,6 +69,7 @@ function getState(): WAClientState {
       client: null,
       status: 'disconnected',
       qrString: null,
+      pairingCode: null,
       info: null,
       ackMap: new Map(),
       lastError: null,
@@ -84,6 +86,10 @@ export function getStatus(): WAStatus {
 
 export function getQR(): string | null {
   return getState().qrString;
+}
+
+export function getPairingCode(): string | null {
+  return getState().pairingCode;
 }
 
 export function getClientInfo(): { pushname?: string; wid?: string } | null {
@@ -148,6 +154,76 @@ export function clearSavedSession(sessionId?: string | null): void {
     }
   } catch (err) {
     console.error('[WhatsApp] Failed to clear saved session:', err);
+  }
+}
+
+/**
+ * Clear all auth data, local cache (.wwebjs_auth, .wwebjs_cache), and reset state.
+ */
+export function clearAllCaches(): void {
+  try {
+    if (fs.existsSync(AUTH_PATH)) {
+      fs.rmSync(AUTH_PATH, { recursive: true, force: true });
+    }
+    const rootCache = path.join(process.cwd(), '.wwebjs_cache');
+    if (fs.existsSync(rootCache)) {
+      fs.rmSync(rootCache, { recursive: true, force: true });
+    }
+    const tmpCache = path.join(os.tmpdir(), '.wwebjs_cache');
+    if (fs.existsSync(tmpCache)) {
+      fs.rmSync(tmpCache, { recursive: true, force: true });
+    }
+    const state = getState();
+    state.client = null;
+    state.status = 'disconnected';
+    state.qrString = null;
+    state.pairingCode = null;
+    state.info = null;
+    state.lastError = null;
+    state.profile = null;
+    state.sessionId = null;
+    state.ackMap.clear();
+    console.log('[WhatsApp] All auth caches and sessions cleared.');
+  } catch (err) {
+    console.error('[WhatsApp] Failed to clear all caches:', err);
+  }
+}
+
+/**
+ * Request a phone number pairing code from whatsapp-web.js.
+ */
+export async function requestPairingCode(phoneNumber: string, sessionId?: string): Promise<string> {
+  const cleanPhone = phoneNumber.replace(/\D/g, '');
+  if (!cleanPhone || cleanPhone.length < 7) {
+    throw new Error(`Invalid phone number for pairing: "${phoneNumber}"`);
+  }
+
+  const state = getState();
+  const targetSession = sessionId || state.sessionId || `session_${Date.now()}`;
+
+  if (!state.client || state.status === 'disconnected') {
+    await initialize({ sessionId: targetSession });
+  }
+
+  let attempts = 0;
+  while (!state.client && attempts < 10) {
+    await new Promise((r) => setTimeout(r, 500));
+    attempts++;
+  }
+
+  if (!state.client) {
+    throw new Error('WhatsApp client failed to initialize for pairing code');
+  }
+
+  try {
+    const code = await state.client.requestPairingCode(cleanPhone);
+    state.pairingCode = code;
+    state.status = 'qr';
+    return code;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    state.lastError = `Pairing code error: ${msg}`;
+    throw err;
   }
 }
 
