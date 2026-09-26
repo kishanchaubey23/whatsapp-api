@@ -47,12 +47,12 @@ function parseRedisUrl(url: string): {
 }
 
 export const config = {
-  port: Number(process.env.PORT ?? 4000),
+  port: Number(process.env.PORT ?? 8880),
   nodeEnv: process.env.NODE_ENV ?? 'development',
   jwtSecret: env('JWT_SECRET', 'dev-enterprise-jwt'),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '7d',
   corsOrigins: (process.env.CORS_ORIGINS ?? 'http://localhost:3000').split(',').map((s) => s.trim()),
-  databaseUrl: env('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/sendstack'),
+  databaseUrl: env('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/loopx'),
   redisUrl: process.env.REDIS_URL ?? 'redis://localhost:6379',
   get redisConnection() {
     return parseRedisUrl(this.redisUrl);

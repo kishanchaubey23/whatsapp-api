@@ -92,7 +92,7 @@ export default function AboutPage() {
                         <p>{t('about.builtByDesc')}</p>
                         <p>
                             <a href="https://loopanda.com" target="_blank" rel="noopener noreferrer" className="privacy-repo-link">
-                                loopanda.com
+                                dev.loopanda.in
                             </a>
                         </p>
                     </section>

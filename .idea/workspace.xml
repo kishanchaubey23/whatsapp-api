@@ -5,13 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="53ec436a-82ec-4297-8446-1bbec4a1854b" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/backend/.env.example" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/src/config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/config.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/server.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/server.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/workers/GlobalRegistryRecheckWorker.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/workers/GlobalRegistryRecheckWorker.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/workers/MessageWorker.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/workers/MessageWorker.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/social-preview.png" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
