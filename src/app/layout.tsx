@@ -52,16 +52,14 @@ export const metadata: Metadata = {
     type: "website",
     url: SITE_URL,
     siteName: "Loopx powered by Loopanda",
-    title: "Loopx — Bulk Email & WhatsApp Messaging Platform",
-    description: "Send personalized bulk emails and WhatsApp messages from CSV. Powered by Loopanda. Free, fully offline, secure.",
-    images: [{ url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630, alt: "Loopx — Bulk Messaging Platform" }],
+    title: "Loopx — Bulk Email & WhatsApp Messaging",
+    description: "Send personalized bulk emails and WhatsApp messages from CSV. Powered by Loopanda.",
     locale: "en_US",
   },
   twitter: {
-    card: "summary_large_image",
-    title: "Loopx — Bulk Email & WhatsApp Messaging | powered by Loopanda",
+    card: "summary",
+    title: "Loopx — Bulk Email & WhatsApp Messaging",
     description: "Send personalized bulk emails and WhatsApp messages from CSV. Powered by Loopanda.",
-    images: [`${SITE_URL}/opengraph-image`],
   },
 };
 
